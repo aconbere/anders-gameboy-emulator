@@ -32,7 +32,8 @@ impl Registers {
 }
 
 pub fn new() -> Registers {
-    return Registers{ a:0, b:0, c:0, d:0, e:0, f:0, h:0, l:0, sp:0xFFFE, pc:0x0100 }
+    // return Registers{ a:0, b:0, c:0, d:0, e:0, f:0, h:0, l:0, sp:0xFFFE, pc:0x0100 }
+    return Registers{ a:0, b:0, c:0, d:0, e:0, f:0, h:0, l:0, sp:0xFFFE, pc:0x0000 }
 }
 
 fn join_registers(a1:u8, b1:u8) -> u16 {
