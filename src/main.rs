@@ -1,17 +1,19 @@
 mod memory;
 mod registers;
 mod instructions;
+mod program;
 
 fn main() {
-    let mut memory = memory::init();
-    let mut registers = registers::init();
-    let instructions = instructions::init();
+    let memory = memory::init();
+    let _registers = registers::init();
+    let _instructions = instructions::init();
 
+    test_memory(memory)
 }
 
-fn test_memory(memory:memory::Memory) {
+fn test_memory(mut memory:memory::RAM) {
     memory::dump_map(&memory);
-    memory[0x0000] = 12;
+    memory.set(0x0000, 12);
     memory::dump_map(&memory);
 }
 

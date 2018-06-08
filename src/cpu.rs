@@ -11,8 +11,10 @@ struct CPU {
 }
 
 impl CPU {
-    pub fn next() {
+    pub fn run() {
+        let pc = registers.getPC();
 
+        let opcode = memory
 
     }
 }

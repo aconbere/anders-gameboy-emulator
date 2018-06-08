@@ -1,9 +1,25 @@
 use std::ops::Range;
 
-pub type Memory = [u8; 65536];
+pub struct RAM {
+    storage: [u8; 65536]
+}
 
-pub fn init() -> Memory {
-    return [0; 65536];
+impl RAM {
+    pub fn get(&self, address:u16) -> u8 {
+        let a = address as usize;
+        self.storage[a]
+    }
+
+    pub fn set(&mut self, address:u16, v:u8) {
+        let a = address as usize;
+        self.storage[a] = v
+    }
+}
+
+pub fn init() -> RAM {
+    RAM {
+        storage: [0; 65536]
+    }
 }
 
 pub enum Kind {
@@ -26,7 +42,7 @@ pub enum Kind {
 }
 
 struct Space {
-    range: Range<usize>,
+    range: Range<u16>,
     description: String
 }
 
@@ -102,18 +118,18 @@ fn lookup_space(k: Kind) -> Space {
     }
 }
 
-pub fn dump_space(memory:&Memory, kind:Kind) {
+pub fn dump_space(memory:&RAM, kind:Kind) {
     let space = lookup_space(kind);
 
     print!("{}: \n", space.description);
 
     for i in space.range {
-        print!("{}", memory[i])
+        print!("{}", memory.get(i))
     }
     print!("\n\n")
 }
 
-pub fn dump_map(memory:&Memory) {
+pub fn dump_map(memory:&RAM) {
     dump_space(memory, Kind::RestartAndInterrupt);
     dump_space(memory, Kind::CartridgeHeader);
     dump_space(memory, Kind::CartridgeROMBank0);

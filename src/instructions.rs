@@ -1,16 +1,16 @@
-mod memory;
-mod registers;
+use ::memory;
+use ::registers;
 
-struct Instruction {
+pub struct Instruction {
     label: String,
-    operation: Box<Fn(registers::Registers, memory::Memory)>
+    operation: Box<Fn(registers::Registers, memory::RAM)>
 }
 
 pub fn init() -> Vec<Instruction> {
     let mut instructions = Vec::with_capacity(256);
     instructions[0x0000] = Instruction {
         label: String::from("NOP"),
-        operation: Box::new(|r:registers::Registers, m:memory::Memory|{})
+        operation: Box::new(|_:registers::Registers, _:memory::RAM|{})
     };
     return instructions
 }
