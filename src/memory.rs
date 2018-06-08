@@ -16,7 +16,7 @@ impl RAM {
     }
 }
 
-pub fn init() -> RAM {
+pub fn new() -> RAM {
     RAM {
         storage: [0; 65536]
     }

@@ -2,13 +2,15 @@ mod memory;
 mod registers;
 mod instructions;
 mod program;
+mod cpu;
 
 fn main() {
-    let memory = memory::init();
-    let _registers = registers::init();
-    let _instructions = instructions::init();
-
-    test_memory(memory)
+    let registers = registers::new();
+    let instructions = instructions::new();
+    let memory = memory::new();
+    let program = [0;512];
+    let mut cpu = cpu::new(registers, instructions, memory, program);
+    cpu.run()
 }
 
 fn test_memory(mut memory:memory::RAM) {

@@ -24,11 +24,14 @@ impl Registers {
     pub fn get_bc(&self) -> u16 { join_registers(self.b, self.c) }
     pub fn get_de(&self) -> u16 { join_registers(self.d, self.e) }
     pub fn get_hl(&self) -> u16 { join_registers(self.h, self.l) }
+    pub fn get_pc(&self) -> u16 { self.pc }
+    pub fn get_sp(&self) -> u16 { self.sp }
 
     pub fn set_a(&mut self, n:u8) { self.a = n }
+    pub fn set_pc(&mut self, n:u16) { self.pc = n }
 }
 
-pub fn init() -> Registers {
+pub fn new() -> Registers {
     return Registers{ a:0, b:0, c:0, d:0, e:0, f:0, h:0, l:0, sp:0xFFFE, pc:0x0100 }
 }
 

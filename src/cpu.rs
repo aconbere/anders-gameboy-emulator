@@ -1,30 +1,39 @@
-mod registers;
-mod instructions;
-mod memory;
-mod program;
+use ::registers;
+use ::instructions;
+use ::memory;
+use ::program;
 
-struct CPU {
+pub struct CPU {
     registers: registers::Registers,
     instructions: instructions::Instructions,
-    memory: memory::Memory,
+    memory: memory::RAM,
     program: program::Program
 }
 
 impl CPU {
-    pub fn run() {
-        let pc = registers.getPC();
+    pub fn run(&mut self) {
+        let pc = self.registers.get_pc();
+        println!("pc: {}", pc);
+        let opcode = self.memory.get(pc);
+        println!("opcode: {}", opcode);
+        let instruction = self.instructions.get(opcode);
+        println!("instruction: {}", instruction.label);
 
-        let opcode = memory
+        let mut args = vec![0; instruction.args as usize];
+        for _ in 1..instruction.args {
+            let next = pc+1;
+            self.registers.set_pc(next);
+            args.push(self.memory.get(next))
+        }
 
+        instruction.call(&self.registers, &self.memory, args);
     }
 }
 
-
-
-pub fn init(
+pub fn new(
     registers:registers::Registers,
     instructions:instructions::Instructions,
-    memory:memory::Memory,
+    memory:memory::RAM,
     program:program::Program
 ) -> CPU {
     CPU {

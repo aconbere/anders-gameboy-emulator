@@ -1,1 +1,1 @@
-pub type Program = [u8; 65536];
+pub type Program = [u8; 512];
