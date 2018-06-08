@@ -28,7 +28,7 @@ impl Instructions {
 mod operations {
     use ::memory;
     use ::registers;
-    pub fn nop(_:&registers::Registers, _:&memory::RAM, args:Vec<u8>) {}
+    pub fn nop(_:&registers::Registers, _:&memory::RAM, _:Vec<u8>) {}
     // fn ld_bc_d16(_:&registers::Registers, _:&memory::RAM) {
     // 
     // }

@@ -3,14 +3,14 @@ use ::instructions;
 use ::memory;
 use ::program;
 
-pub struct CPU {
-    registers: registers::Registers,
-    instructions: instructions::Instructions,
-    memory: memory::RAM,
-    program: program::Program
+pub struct CPU <'a> {
+    registers: &'a mut registers::Registers,
+    instructions: &'a instructions::Instructions,
+    memory: &'a memory::RAM,
+    program: &'a program::Program
 }
 
-impl CPU {
+impl <'a> CPU <'a> {
     pub fn run(&mut self) {
         let pc = self.registers.get_pc();
         println!("pc: {}", pc);
@@ -25,17 +25,18 @@ impl CPU {
             self.registers.set_pc(next);
             args.push(self.memory.get(next))
         }
+        println!("calling instruction: {} with args: {:?}", instruction.label, args);
 
         instruction.call(&self.registers, &self.memory, args);
     }
 }
 
-pub fn new(
-    registers:registers::Registers,
-    instructions:instructions::Instructions,
-    memory:memory::RAM,
-    program:program::Program
-) -> CPU {
+pub fn new<'a>(
+    registers:&'a mut registers::Registers,
+    instructions:&'a instructions::Instructions,
+    memory:&'a memory::RAM,
+    program:&'a program::Program
+) -> CPU <'a> {
     CPU {
         registers:registers,
         instructions:instructions,

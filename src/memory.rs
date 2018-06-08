@@ -1,5 +1,3 @@
-use std::ops::Range;
-
 pub static GBC_BOOT_ROM: &'static [u8] = &[
     0x31, 0xFE, 0xFF, 0xAF, 0x21, 0xFF, 0x9F, 0x32, 0xCB, 0x7C, 0x20, 0xFB, 0x21, 0x26, 0xFF, 0x0E,
     0x11, 0x3E, 0x80, 0x32, 0xE2, 0x0C, 0x3E, 0xF3, 0xE2, 0x32, 0x3E, 0x77, 0x77, 0x3E, 0xFC, 0xE0,
@@ -17,13 +15,13 @@ pub static GBC_BOOT_ROM: &'static [u8] = &[
     0xDD, 0xDC, 0x99, 0x9F, 0xBB, 0xB9, 0x33, 0x3E, 0x3C, 0x42, 0xB9, 0xA5, 0xB9, 0xA5, 0x42, 0x3C,
     0x21, 0x04, 0x01, 0x11, 0xA8, 0x00, 0x1A, 0x13, 0xBE, 0x00, 0x00, 0x23, 0x7D, 0xFE, 0x34, 0x20,
     0xF5, 0x06, 0x19, 0x78, 0x86, 0x23, 0x05, 0x20, 0xFB, 0x86, 0x00, 0x00, 0x3E, 0x01, 0xE0, 0x50
-]
+];
 
 pub struct RAM {
     storage: [u8; 65536]
 }
 
-impl RAM {
+impl <'a> RAM {
     pub fn get(&self, address:u16) -> u8 {
         let a = address as usize;
         self.storage[a]
@@ -33,6 +31,72 @@ impl RAM {
         let a = address as usize;
         self.storage[a] = v
     }
+
+    pub fn get_space(&self, k:Kind) -> &[u8] {
+        match k {
+            Kind::RestartAndInterrupt => &self.storage[0x0000..0x00FF],
+            Kind::CartridgeHeader => &self.storage[0x0100..0x014F],
+            Kind::CartridgeROMBank0 => &self.storage[0x0150..0x3FFF],
+            Kind::CartridgeROMBankSwitchable => &self.storage[0x4000..0x7FFF],
+            Kind::CharacterRAM => &self.storage[0x8000..0x97FF],
+            Kind::BackgroundMapData1 => &self.storage[0x9800..0x9BFF],
+            Kind::BackgroundMapData2 => &self.storage[0x9C00..0x9FFF],
+            Kind::CartridgeRAM => &self.storage[0xA000..0xBFFF],
+            Kind::InternalRAMBank0 => &self.storage[0xC000..0xCFFF],
+            Kind::InternalRAMBankSwitchable => &self.storage[0xD000..0xDFFF],
+            Kind::EchoRAM => &self.storage[0xE000..0xFDFF],
+            Kind::ObjectAttributeMemory => &self.storage[0xFE00..0xFE9F],
+            Kind::UnusableMemory => &self.storage[0xFEA0..0xFEFF],
+            Kind::HardwareIORegisters => &self.storage[0xFF00..0xFF7F],
+            Kind::ZeroPage => &self.storage[0xFF80..0xFFFE],
+            Kind::InterruptEnableFlag => &self.storage[0x0000..0x00FF],
+        }
+    }
+
+    pub fn dump_space(&self, kind:Kind) {
+        let space = self.get_space(kind);
+
+        for i in space {
+            print!("{}", i)
+        }
+        print!("\n\n")
+    }
+
+    pub fn dump_map(&self) {
+        println!("RestartAndInterrupt");
+        self.dump_space(Kind::RestartAndInterrupt);
+        println!("CartridgeHeader");
+        self.dump_space(Kind::CartridgeHeader);
+        println!("CartridgeROMBank0");
+        self.dump_space(Kind::CartridgeROMBank0);
+        println!("CartridgeROMBankSwitchable");
+        self.dump_space(Kind::CartridgeROMBankSwitchable);
+        println!("CharacterRAM");
+        self.dump_space(Kind::CharacterRAM);
+        println!("BackgroundMapData1");
+        self.dump_space(Kind::BackgroundMapData1);
+        println!("BackgroundMapData2");
+        self.dump_space(Kind::BackgroundMapData2);
+        println!("CartridgeRAM");
+        self.dump_space(Kind::CartridgeRAM);
+        println!("InternalRAMBank0");
+        self.dump_space(Kind::InternalRAMBank0);
+        println!("InternalRAMBankSwitchable");
+        self.dump_space(Kind::InternalRAMBankSwitchable);
+        println!("EchoRAM");
+        self.dump_space(Kind::EchoRAM);
+        println!("ObjectAttributeMemory");
+        self.dump_space(Kind::ObjectAttributeMemory);
+        println!("UnusableMemory");
+        self.dump_space(Kind::UnusableMemory);
+        println!("HardwareIORegisters");
+        self.dump_space(Kind::HardwareIORegisters);
+        println!("ZeroPage");
+        self.dump_space(Kind::ZeroPage);
+        println!("InterruptEnableFlag");
+        self.dump_space(Kind::InterruptEnableFlag);
+    }
+
 }
 
 pub fn new() -> RAM {
@@ -60,110 +124,8 @@ pub enum Kind {
     InterruptEnableFlag,
 }
 
-struct Space {
-    range: Range<u16>,
-    description: String
-}
-
 /* Memory space mappings
  * http://gameboy.mongenel.com/dmg/asmmemmap.html
  */
-fn lookup_space(k: Kind) -> Space {
-    match k {
-        Kind::RestartAndInterrupt => Space {
-            range: 0x0000..0x00FF,
-            description: String::from("Restart and Interupt")
-        },
-        Kind::CartridgeHeader => Space {
-            range: 0x0100..0x014F,
-            description: String::from("Cartridge Header")
-        },
-        Kind::CartridgeROMBank0 => Space {
-            range: 0x0150..0x3FFF,
-            description: String::from("Cartridge ROM Bank 0")
-        },
-        Kind::CartridgeROMBankSwitchable => Space {
-            range: 0x4000..0x7FFF,
-            description: String::from("Cartridge ROM Bank Switchable")
-        },
-        Kind::CharacterRAM => Space {
-            range: 0x8000..0x97FF,
-            description: String::from("Character RAM")
-        },
-        Kind::BackgroundMapData1 => Space {
-            range: 0x9800..0x9BFF,
-            description: String::from("Background Map Data 1")
-        },
-        Kind::BackgroundMapData2 => Space {
-            range: 0x9C00..0x9FFF,
-            description: String::from("Background Map Data 2")
-        },
-        Kind::CartridgeRAM => Space {
-            range: 0xA000..0xBFFF,
-            description: String::from("Cartridge RAM")
-        },
-        Kind::InternalRAMBank0 => Space {
-            range: 0xC000..0xCFFF,
-            description: String::from("Internal RAM Bank 0")
-        },
-        Kind::InternalRAMBankSwitchable => Space {
-            range: 0xD000..0xDFFF,
-            description: String::from("Internal Ram Bank Switchable")
-        },
-        Kind::EchoRAM => Space {
-            range:0xE000..0xFDFF,
-            description: String::from("Echo RAM")
-        },
-        Kind::ObjectAttributeMemory => Space {
-            range: 0xFE00..0xFE9F,
-            description: String::from("Object Attribute Memory")
-        },
-        Kind::UnusableMemory => Space {
-            range: 0xFEA0..0xFEFF,
-            description: String::from("Unusable Memory")
-        },
-        Kind::HardwareIORegisters => Space {
-            range: 0xFF00..0xFF7F,
-            description: String::from("Hardware IO Registers")
-        },
-        Kind::ZeroPage => Space {
-            range: 0xFF80..0xFFFE,
-            description: String::from("Zero Page")
-        },
-        Kind::InterruptEnableFlag => Space {
-            range: 0x0000..0x00FF,
-            description: String::from("Interupt Enable Flag")
-        },
-    }
-}
 
-pub fn dump_space(memory:&RAM, kind:Kind) {
-    let space = lookup_space(kind);
-
-    print!("{}: \n", space.description);
-
-    for i in space.range {
-        print!("{}", memory.get(i))
-    }
-    print!("\n\n")
-}
-
-pub fn dump_map(memory:&RAM) {
-    dump_space(memory, Kind::RestartAndInterrupt);
-    dump_space(memory, Kind::CartridgeHeader);
-    dump_space(memory, Kind::CartridgeROMBank0);
-    dump_space(memory, Kind::CartridgeROMBankSwitchable);
-    dump_space(memory, Kind::CharacterRAM);
-    dump_space(memory, Kind::BackgroundMapData1);
-    dump_space(memory, Kind::BackgroundMapData2);
-    dump_space(memory, Kind::CartridgeRAM);
-    dump_space(memory, Kind::InternalRAMBank0);
-    dump_space(memory, Kind::InternalRAMBankSwitchable);
-    dump_space(memory, Kind::EchoRAM);
-    dump_space(memory, Kind::ObjectAttributeMemory);
-    dump_space(memory, Kind::UnusableMemory);
-    dump_space(memory, Kind::HardwareIORegisters);
-    dump_space(memory, Kind::ZeroPage);
-    dump_space(memory, Kind::InterruptEnableFlag);
-}
 
