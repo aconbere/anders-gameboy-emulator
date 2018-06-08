@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-type Memory = [u8; 65536];
+pub type Memory = [u8; 65536];
 
 pub fn init() -> Memory {
     return [0; 65536];

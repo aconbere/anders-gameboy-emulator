@@ -1,12 +1,18 @@
 mod memory;
-mod opcodes;
+mod registers;
+mod instructions;
 
 fn main() {
-    let mut mem = memory::init();
+    let mut memory = memory::init();
+    let mut registers = registers::init();
+    let instructions = instructions::init();
 
-    memory::dump_map(&mem);
-    mem[0x0000] = 12;
-    memory::dump_map(&mem);
+}
+
+fn test_memory(memory:memory::Memory) {
+    memory::dump_map(&memory);
+    memory[0x0000] = 12;
+    memory::dump_map(&memory);
 }
 
 
