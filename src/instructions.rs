@@ -2,9 +2,19 @@ use ::memory;
 use ::registers;
 
 pub struct Instruction {
-    operation: Box<Fn(&registers::Registers, &memory::RAM, Vec<u8>)>,
+    operation: fn(&registers::Registers, &memory::RAM, Vec<u8>),
     pub args: u8,
     pub label: String
+}
+
+impl Clone for Instruction {
+    fn clone(&self) -> Self { 
+        Instruction {
+            operation:self.operation,
+            args:self.args,
+            label:self.label.clone()
+        }
+    }
 }
 
 impl Instruction {
@@ -29,6 +39,9 @@ mod operations {
     use ::memory;
     use ::registers;
     pub fn nop(_:&registers::Registers, _:&memory::RAM, _:Vec<u8>) {}
+    pub fn ld_sp(_:&registers::Registers, _:&memory::RAM, args:Vec<u8>) {
+        println!("LD SP: {:?}", args)
+    }
     // fn ld_bc_d16(_:&registers::Registers, _:&memory::RAM) {
     // 
     // }
@@ -37,14 +50,22 @@ mod operations {
 
 pub fn new() -> Instructions {
     let nop = Instruction {
-        operation: Box::new(operations::nop),
+        operation: operations::nop,
         args: 1,
         label: String::from("NOP"),
     };
 
+    let ld_sp = Instruction {
+        operation: operations::ld_sp,
+        args: 3,
+        label: String::from("LD SP"),
+    };
+
+    let mut instructions = vec![nop;256];
+
+    instructions[0x0031] = ld_sp;
+
     Instructions {
-        instructions: vec![
-            nop,
-        ]
+        instructions: instructions
     }
 }
