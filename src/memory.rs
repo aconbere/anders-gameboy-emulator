@@ -36,8 +36,6 @@ impl <'a> RAM {
 
     pub fn set_space(&mut self, kind: Kind, v: &[u8]) {
         let r = get_address_range(kind);
-        println!("set_space: v.len: {}", v.len());
-        println!("set_space: range.len: {}", r.len());
         match self.storage.get_mut(r) {
             Some(s) => s.clone_from_slice(v),
             None => panic!("WTF")
@@ -57,12 +55,12 @@ impl <'a> RAM {
         let space = self.get_space(kind);
 
         for i in space {
-            print!("{}", i)
+            print!("{:X},", i)
         }
         print!("\n\n")
     }
 
-    pub fn dump_map(&self) {
+    pub fn dump_map(&mut self) {
         println!("RestartAndInterrupt");
         self.dump_space(Kind::RestartAndInterrupt);
         println!("CartridgeHeader");

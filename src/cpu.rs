@@ -6,35 +6,57 @@ use ::program;
 pub struct CPU <'a> {
     registers: &'a mut registers::Registers,
     instructions: &'a instructions::Instructions,
-    memory: &'a memory::RAM,
+    memory: &'a mut memory::RAM,
     program: &'a program::Program
 }
 
 impl <'a> CPU <'a> {
     pub fn run(&mut self) {
-        let pc = self.registers.get_pc();
-        println!("pc: {}", pc);
-        let opcode = self.memory.get(pc);
-        println!("opcode: {}", opcode);
-        let instruction = self.instructions.get(opcode);
-        println!("instruction: {}", instruction.label);
-
-        let mut args = vec![0; instruction.args as usize];
-        for _ in 1..instruction.args {
-            let next = pc+1;
-            self.registers.set_pc(next);
-            args.push(self.memory.get(next))
+        for i in 0..10 {
+            self.next()
         }
-        println!("calling instruction: {} with args: {:?}", instruction.label, args);
+    }
+    pub fn next(&mut self) {
+        println!("TICK");
 
-        instruction.call(&self.registers, &self.memory, args);
+        let pc = self.registers.get_pc();
+        println!("\tpc: {}", pc);
+
+        let opcode = self.memory.get(pc);
+        self.registers.inc_pc();
+        println!("\topcode: {:X}", opcode);
+
+        let instruction = if opcode == 0x00CB {
+            println!("found cb opcode");
+            let pc = self.registers.get_pc();
+            let opcode = self.memory.get(pc);
+            self.registers.inc_pc();
+            self.instructions.get_cb(opcode)
+        } else {
+            self.instructions.get(opcode)
+        };
+        println!("\tinstruction: {}", instruction.label);
+
+        let mut args = Vec::new();
+        for _ in 0..instruction.args {
+            let next = self.registers.get_pc();
+            args.push(self.memory.get(next));
+            self.registers.inc_pc()
+        }
+        println!("\tcalling instruction: {} with args: {:?}", instruction.label, args);
+
+        instruction.call(&mut self.registers, &mut self.memory, args);
+    }
+
+    pub fn dump_map(&mut self) {
+        self.memory.dump_map()
     }
 }
 
 pub fn new<'a>(
     registers:&'a mut registers::Registers,
     instructions:&'a instructions::Instructions,
-    memory:&'a memory::RAM,
+    memory:&'a mut memory::RAM,
     program:&'a program::Program
 ) -> CPU <'a> {
     CPU {
