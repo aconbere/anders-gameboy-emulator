@@ -29,3 +29,11 @@ pub fn check_bit(input: u8, n: u8) -> bool {
 pub fn set_bit(input: u8, n: u8) -> u8 {
     input | (1 << n)
 }
+
+pub fn add_unsigned_signed(unsigned:u16, signed:i8) -> u16 {
+    if signed < 0 {
+        unsigned - (-signed) as u16
+    } else {
+        unsigned + (signed) as u16
+    }
+}

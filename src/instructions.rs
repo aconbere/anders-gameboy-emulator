@@ -85,6 +85,17 @@ mod operations {
         }
     }
 
+    pub fn jr_nz(registers:&mut registers::Registers, memory:&mut memory::RAM, args:Vec<u8>) {
+        println!("JR NZ,e: {:?}", args);
+        if !memory.get_flag(memory::Flag::Z) {
+            let v = args[0] as i8;
+            let pc = registers.get16(registers::Registers16::PC);
+            // println!("JR: {}, {}", v, pc);
+            println!("JR: {}, {}, {}", v, pc, bytes::add_unsigned_signed(pc, v));
+            registers.set16(registers::Registers16::PC, bytes::add_unsigned_signed(pc, v))
+        }
+    }
+
     fn ld_u8_into(registers:&mut registers::Registers, r:registers::Registers8, v:u8) {
         registers.set8(r, v)
     }
@@ -125,11 +136,18 @@ pub fn new() -> Instructions {
         label: String::from("LDD HL"),
     };
 
+    let jr_nz = Instruction {
+        operation: operations::jr_nz,
+        args: 1,
+        label: String::from("JR NZ"),
+    };
+
     let mut instructions = vec![nop;256];
 
     instructions[0x0031] = ld_sp;
     instructions[0x0032] = ldd_hl;
     instructions[0x00AF] = xor_a;
+    instructions[0x0020] = jr_nz;
     instructions[0x0021] = ld_hl;
 
     let cb_nop = Instruction {
@@ -140,8 +158,8 @@ pub fn new() -> Instructions {
 
     let bit_7_h = Instruction {
         operation: operations::bit_7_h,
-        args: 1,
-        label: String::from("LDD HL"),
+        args: 0,
+        label: String::from("BIT 7 H"),
     };
 
 

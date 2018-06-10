@@ -12,7 +12,7 @@ pub struct CPU <'a> {
 
 impl <'a> CPU <'a> {
     pub fn run(&mut self) {
-        for i in 0..10 {
+        for i in 0..30 {
             self.next()
         }
     }
