@@ -45,30 +45,52 @@ mod operations {
     use ::memory;
     use ::registers;
     use ::bytes;
+
     pub fn nop(_:&mut registers::Registers, _:&mut memory::RAM, _:Vec<u8>) {}
+
+    pub fn ld_a(registers:&mut registers::Registers, _:&mut memory::RAM, args:Vec<u8>) {
+        ld_u8_into(registers, registers::Registers8::A, args[0])
+    }
+
     pub fn ld_sp(registers:&mut registers::Registers, _:&mut memory::RAM, args:Vec<u8>) {
-        println!("LD SP: {:?}", args);
-        registers.set_sp(bytes::combine_little(args[0], args[1]))
+        ld_u16_into(registers, registers::Registers16::SP, args)
     }
+
     pub fn ld_hl(registers:&mut registers::Registers, _:&mut memory::RAM, args:Vec<u8>) {
-        println!("LD HL: {:?}", args);
-        registers.set_h(args[1]);
-        registers.set_l(args[0]);
+        ld_u16_into(registers, registers::Registers16::HL, args)
     }
+
+
     pub fn ldd_hl(registers:&mut registers::Registers, memory:&mut memory::RAM, _:Vec<u8>) {
-        let a = registers.get_a();
-        let hl = registers.get_hl();
+        let a = registers.get8(registers::Registers8::A);
+        let hl = registers.get16(registers::Registers16::HL);
         println!("LDD HL - A: {} | HL: {}", a, hl);
         memory.set(hl, a);
         registers.dec_hl();
     }
+
     pub fn xor_a(registers:&mut registers::Registers, _:&mut memory::RAM, args:Vec<u8>) {
         println!("XOR A: {:?}", args);
-        let a = registers.get_a();
-        registers.set_a(a ^ a)
+        let a = registers.get8(registers::Registers8::A);
+        registers.set8(registers::Registers8::A, a ^ a)
     }
-    pub fn bit_7_h(_:&mut registers::Registers, _:&mut memory::RAM, args:Vec<u8>) {
-        println!("BIT 7,h: {:?}", args)
+
+    pub fn bit_7_h(registers:&mut registers::Registers, memory:&mut memory::RAM, args:Vec<u8>) {
+        println!("BIT 7,h: {:?}", args);
+        let h = registers.get8(registers::Registers8::H);
+        if bytes::check_bit(h, 7) {
+            memory.clear_flag(memory::Flag::Z);
+        } else {
+            memory.set_flag(memory::Flag::Z);
+        }
+    }
+
+    fn ld_u8_into(registers:&mut registers::Registers, r:registers::Registers8, v:u8) {
+        registers.set8(r, v)
+    }
+
+    fn ld_u16_into(registers:&mut registers::Registers, r:registers::Registers16, args:Vec<u8>) {
+        registers.set16(r, bytes::combine_little(args[0], args[1]))
     }
 }
 

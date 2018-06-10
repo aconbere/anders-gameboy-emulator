@@ -1,4 +1,5 @@
 use std::ops::Range;
+use bytes;
 
 pub static GBC_BOOT_ROM: &'static [u8] = &[
     0x31, 0xFE, 0xFF, 0xAF, 0x21, 0xFF, 0x9F, 0x32, 0xCB, 0x7C, 0x20, 0xFB, 0x21, 0x26, 0xFF, 0x0E,
@@ -23,6 +24,10 @@ pub struct RAM {
     storage: [u8; 65536]
 }
 
+pub enum Flag {
+    Z
+}
+
 impl <'a> RAM {
     pub fn get(&self, address:u16) -> u8 {
         let a = address as usize;
@@ -32,6 +37,34 @@ impl <'a> RAM {
     pub fn set(&mut self, address:u16, v:u8) {
         let a = address as usize;
         self.storage[a] = v
+    }
+
+    fn get_flag_i(&self, n:u8) -> bool {
+        let f = self.get(0xFFFF);
+        bytes::check_bit(f, n)
+    }
+
+    fn set_flag_i(&mut self, n:u8) {
+        let f = self.get(0xFFFF);
+        self.set(0xFFFF, bytes::set_bit(f, n))
+    }
+
+    pub fn set_flag(&mut self, f:Flag) {
+        match f {
+            Flag::Z => self.set_flag_i(7)
+        }
+    }
+
+    pub fn get_flag(&mut self, f:Flag) -> bool {
+        match f {
+            Flag::Z => self.get_flag_i(7)
+        }
+    }
+
+    pub fn clear_flag(&self, f:Flag) {
+        match f {
+            Flag::Z => {}
+        }
     }
 
     pub fn set_space(&mut self, kind: Kind, v: &[u8]) {

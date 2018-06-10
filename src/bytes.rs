@@ -17,3 +17,15 @@ pub fn split_u16(a:u16) -> (u8, u8) {
     let low = a as u8;
     (high, low)
 }
+
+pub fn check_bit(input: u8, n: u8) -> bool {
+    if n < 8 {
+        input & (1 << n) != 0
+    } else {
+        false
+    }
+}
+
+pub fn set_bit(input: u8, n: u8) -> u8 {
+    input | (1 << n)
+}
