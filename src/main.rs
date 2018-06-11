@@ -15,5 +15,5 @@ fn main() {
     let program = [0;512];
     let mut cpu = cpu::new(&mut registers, &instructions, &mut memory, &program);
     cpu.run();
-    cpu.dump_map();
+    //cpu.dump_map();
 }

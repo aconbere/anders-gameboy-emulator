@@ -35,10 +35,10 @@ impl Registers {
     }
     pub fn get16(&self, r:Registers16) -> u16 {
         match r {
-            Registers16::AF => bytes::combine_big(self.a, self.b),
-            Registers16::BC => bytes::combine_big(self.b, self.c),
-            Registers16::DE => bytes::combine_big(self.d, self.e),
-            Registers16::HL => bytes::combine_big(self.h, self.l),
+            Registers16::AF => bytes::combine_little(self.a, self.b),
+            Registers16::BC => bytes::combine_little(self.b, self.c),
+            Registers16::DE => bytes::combine_little(self.d, self.e),
+            Registers16::HL => bytes::combine_little(self.h, self.l),
             Registers16::PC => self.pc,
             Registers16::SP => self.sp
         }
@@ -77,8 +77,8 @@ impl Registers {
 
     fn set_combined(&mut self, r1:Registers8, r2:Registers8, v:u16) {
         let (high, low) = bytes::split_u16(v);
-        self.set8(r1, low);
-        self.set8(r2, high);
+        self.set8(r1, high);
+        self.set8(r2, low);
     }
 }
 

@@ -1,7 +1,3 @@
-pub fn combine_big(a:u8, b:u8) -> u16 {
-    combine_little(b, a)
-}
-
 pub fn combine_little(a:u8, b:u8) -> u16 {
     let a1 = a as u16;
     let b1 = b as u16;
@@ -35,5 +31,18 @@ pub fn add_unsigned_signed(unsigned:u16, signed:i8) -> u16 {
         unsigned - (-signed) as u16
     } else {
         unsigned + (signed) as u16
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_check_bit() {
+        println!("First: {:X}, {:b}", 0x99, 0x99);
+        assert_eq!(check_bit(0x99, 7), true);
+        println!("Second: {:X}, {:b}", 0x7F, 0x7F);
+        assert_eq!(check_bit(0x7F, 7), false);
     }
 }

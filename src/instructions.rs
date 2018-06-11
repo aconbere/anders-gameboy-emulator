@@ -52,6 +52,10 @@ mod operations {
         ld_u8_into(registers, registers::Registers8::A, args[0])
     }
 
+    pub fn ld_c(registers:&mut registers::Registers, _:&mut memory::RAM, args:Vec<u8>) {
+        ld_u8_into(registers, registers::Registers8::C, args[0])
+    }
+
     pub fn ld_sp(registers:&mut registers::Registers, _:&mut memory::RAM, args:Vec<u8>) {
         ld_u16_into(registers, registers::Registers16::SP, args)
     }
@@ -64,7 +68,7 @@ mod operations {
     pub fn ldd_hl(registers:&mut registers::Registers, memory:&mut memory::RAM, _:Vec<u8>) {
         let a = registers.get8(registers::Registers8::A);
         let hl = registers.get16(registers::Registers16::HL);
-        println!("LDD HL - A: {} | HL: {}", a, hl);
+        println!("LDD HL - A: {:X} | HL: {:X} {:b}", a, hl, hl);
         memory.set(hl, a);
         registers.dec_hl();
     }
@@ -76,11 +80,12 @@ mod operations {
     }
 
     pub fn bit_7_h(registers:&mut registers::Registers, memory:&mut memory::RAM, args:Vec<u8>) {
-        println!("BIT 7,h: {:?}", args);
         let h = registers.get8(registers::Registers8::H);
+        println!("BIT 7,h: {:X} {:b}", h, h);
         if bytes::check_bit(h, 7) {
             memory.clear_flag(memory::Flag::Z);
         } else {
+            println!("BIT 7,h; is zero");
             memory.set_flag(memory::Flag::Z);
         }
     }
@@ -101,7 +106,9 @@ mod operations {
     }
 
     fn ld_u16_into(registers:&mut registers::Registers, r:registers::Registers16, args:Vec<u8>) {
-        registers.set16(r, bytes::combine_little(args[0], args[1]))
+        let v = bytes::combine_little(args[0], args[1]);
+        println!("ld_u16_into: loading {:X}", v);
+        registers.set16(r, v)
     }
 }
 
@@ -110,6 +117,18 @@ pub fn new() -> Instructions {
         operation: operations::nop,
         args: 0,
         label: String::from("NOP"),
+    };
+
+    let ld_c = Instruction {
+        operation: operations::ld_c,
+        args: 1,
+        label: String::from("LD C"),
+    };
+
+    let ld_a = Instruction {
+        operation: operations::ld_a,
+        args: 1,
+        label: String::from("LD A"),
     };
 
     let ld_sp = Instruction {
@@ -144,8 +163,10 @@ pub fn new() -> Instructions {
 
     let mut instructions = vec![nop;256];
 
+    instructions[0x000E] = ld_c;
     instructions[0x0031] = ld_sp;
     instructions[0x0032] = ldd_hl;
+    instructions[0x003E] = ld_a;
     instructions[0x00AF] = xor_a;
     instructions[0x0020] = jr_nz;
     instructions[0x0021] = ld_hl;

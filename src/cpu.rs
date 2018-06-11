@@ -12,7 +12,7 @@ pub struct CPU <'a> {
 
 impl <'a> CPU <'a> {
     pub fn run(&mut self) {
-        for i in 0..30 {
+        for i in 0..2000 {
             self.next()
         }
     }
@@ -43,7 +43,7 @@ impl <'a> CPU <'a> {
             args.push(self.memory.get(next));
             self.registers.inc_pc()
         }
-        println!("\tcalling instruction: {} with args: {:?}", instruction.label, args);
+        println!("\tcalling instruction: {} with args: {:X?}", instruction.label, args);
 
         instruction.call(&mut self.registers, &mut self.memory, args);
     }
