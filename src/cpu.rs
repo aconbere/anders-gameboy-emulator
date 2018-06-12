@@ -19,7 +19,7 @@ impl <'a> CPU <'a> {
     pub fn next(&mut self) {
         println!("TICK");
 
-        let pc = self.registers.get16(registers::Registers16::PC);
+        let pc = self.registers.get16(&registers::Registers16::PC);
         println!("\tpc: {}", pc);
 
         let opcode = self.memory.get(pc);
@@ -28,22 +28,22 @@ impl <'a> CPU <'a> {
 
         let instruction = if opcode == 0x00CB {
             println!("found cb opcode");
-            let pc = self.registers.get16(registers::Registers16::PC);
+            let pc = self.registers.get16(&registers::Registers16::PC);
             let opcode = self.memory.get(pc);
             self.registers.inc_pc();
             self.instructions.get_cb(opcode)
         } else {
             self.instructions.get(opcode)
         };
-        println!("\tinstruction: {}", instruction.label);
+        println!("\tinstruction: {:?}", instruction);
 
         let mut args = Vec::new();
-        for _ in 0..instruction.args {
-            let next = self.registers.get16(registers::Registers16::PC);
+        for _ in 0..instruction.args() {
+            let next = self.registers.get16(&registers::Registers16::PC);
             args.push(self.memory.get(next));
             self.registers.inc_pc()
         }
-        println!("\tcalling instruction: {} with args: {:X?}", instruction.label, args);
+        println!("\tcalling instruction: {:?} with args: {:X?}", instruction, args);
 
         instruction.call(&mut self.registers, &mut self.memory, args);
     }

@@ -1,8 +1,11 @@
 use ::bytes;
 
+#[derive(Debug, Clone, Copy)]
 pub enum Registers8 {
     A,B,C,D,E,F,H,L
 }
+
+#[derive(Debug, Clone, Copy)]
 pub enum Registers16 {
     AF,BC,DE,HL,PC,SP
 }
@@ -21,7 +24,7 @@ pub struct Registers {
 }
 
 impl Registers {
-    pub fn get8(&self, r:Registers8) -> u8 {
+    pub fn get8(&self, r:&Registers8) -> u8 {
         match r {
             Registers8::A => self.a,
             Registers8::B => self.b,
@@ -33,7 +36,7 @@ impl Registers {
             Registers8::L => self.l
         }
     }
-    pub fn get16(&self, r:Registers16) -> u16 {
+    pub fn get16(&self, r:&Registers16) -> u16 {
         match r {
             Registers16::AF => bytes::combine_little(self.a, self.b),
             Registers16::BC => bytes::combine_little(self.b, self.c),
@@ -44,7 +47,7 @@ impl Registers {
         }
     }
 
-    pub fn set8(&mut self, r:Registers8, v:u8) {
+    pub fn set8(&mut self, r:&Registers8, v:u8) {
         match r {
             Registers8::A => self.a = v,
             Registers8::B => self.b = v,
@@ -57,12 +60,12 @@ impl Registers {
         }
     }
 
-    pub fn set16(&mut self, r:Registers16, v:u16) {
+    pub fn set16(&mut self, r:&Registers16, v:u16) {
         match r {
-            Registers16::AF => self.set_combined(Registers8::A, Registers8::F, v),
-            Registers16::BC => self.set_combined(Registers8::B, Registers8::C, v),
-            Registers16::DE => self.set_combined(Registers8::D, Registers8::E, v),
-            Registers16::HL => self.set_combined(Registers8::H, Registers8::L, v),
+            Registers16::AF => self.set_combined(&Registers8::A, &Registers8::F, v),
+            Registers16::BC => self.set_combined(&Registers8::B, &Registers8::C, v),
+            Registers16::DE => self.set_combined(&Registers8::D, &Registers8::E, v),
+            Registers16::HL => self.set_combined(&Registers8::H, &Registers8::L, v),
             Registers16::PC => self.pc = v,
             Registers16::SP => self.sp = v
         }
@@ -71,11 +74,16 @@ impl Registers {
     pub fn inc_pc(&mut self) { self.pc = self.pc + 1 }
 
     pub fn dec_hl(&mut self) {
-        let hl = self.get16(Registers16::HL) - 1;
-        self.set16(Registers16::HL, hl)
+        let hl = self.get16(&Registers16::HL) - 1;
+        self.set16(&Registers16::HL, hl)
     }
 
-    fn set_combined(&mut self, r1:Registers8, r2:Registers8, v:u16) {
+    pub fn inc_hl(&mut self) {
+        let hl = self.get16(&Registers16::HL) + 1;
+        self.set16(&Registers16::HL, hl)
+    }
+
+    fn set_combined(&mut self, r1:&Registers8, r2:&Registers8, v:u16) {
         let (high, low) = bytes::split_u16(v);
         self.set8(r1, high);
         self.set8(r2, low);

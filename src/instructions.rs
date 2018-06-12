@@ -1,191 +1,243 @@
 use ::memory;
 use ::registers;
+use ::bytes;
 
-pub struct Instruction {
-    operation: fn(&mut registers::Registers, &mut memory::RAM, Vec<u8>),
-    pub args: u8,
-    pub label: String
+/*
+ * LD r,r
+ * LD r,n
+ */
+#[derive(Debug, Clone, Copy)]
+pub enum Source8 {
+    R(registers::Registers8),
+    Mem(registers::Registers16),
+    N,
 }
 
-impl Clone for Instruction {
-    fn clone(&self) -> Self { 
-        Instruction {
-            operation:self.operation,
-            args:self.args,
-            label:self.label.clone()
+#[derive(Debug, Clone, Copy)]
+pub enum Source16 {
+    R(registers::Registers16),
+    N,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum Destination8 {
+    R(registers::Registers8),
+    Mem(registers::Registers16),
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum Destination16 {
+    R(registers::Registers16),
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum JrArgs {
+    Z,
+    NZ,
+    C,
+    NC,
+    N
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum JpArgs {
+    Z,
+    NZ,
+    C,
+    NC,
+    N,
+    HL
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum Op {
+    NOP,
+    Load8(Destination8, Source8),
+    Load16(Destination16, Source16),
+    Inc8(Destination8),
+    Inc16(Destination16),
+    Dec8(Destination8),
+    Dec16(Destination16),
+    LoadAndInc,
+    //LoadAndIncR,
+    LoadAndDec,
+    //LoadAndDecR,
+    XOR(Destination8),
+    JR(JrArgs),
+    JP(JpArgs),
+    LoadIntoC00FF,
+
+    // CB extras
+    BIT(u8, Destination8),
+
+}
+
+fn load_to_memory(
+    registers:&mut registers::Registers,
+    memory:&mut memory::RAM,
+    rm: &registers::Registers16,
+    rv: &registers::Registers8,
+) {
+    let m = registers.get16(rm);
+    let v = registers.get8(rv);
+    memory.set(m, v);
+}
+
+impl Op {
+    pub fn args(&self) -> u8 {
+        match self {
+            Op::NOP => 0,
+            Op::Load8(_, Source8::N) => 1,
+            Op::Load8(_, _) => 0,
+            Op::Load16(_, Source16::N) => 2,
+            Op::Load16(_, _) => 0,
+            Op::Inc8(_) => 0,
+            Op::Inc16(_) => 0,
+            Op::Dec8(_) => 0,
+            Op::Dec16(_) => 0,
+            Op::LoadAndInc => 0,
+            Op::LoadAndDec => 0,
+            Op::XOR(_) => 0,
+            Op::BIT(_, _) => 0,
+            Op::JR(_) => 1,
+            Op::JP(_) => 2,
+            Op::LoadIntoC00FF => 0,
+        }
+    }
+
+    pub fn call(&self, registers:&mut registers::Registers, memory:&mut memory::RAM, args:Vec<u8>) {
+        match self {
+            Op::NOP => {},
+            Op::Load8(Destination8::R(r1), Source8::R(r2)) => {
+                let v = registers.get8(r2);
+                registers.set8(r1, v);
+            },
+            Op::Load8(Destination8::R(r1), Source8::N) => {
+                registers.set8(r1, args[0]);
+            },
+            Op::Load8(Destination8::R(r1), Source8::Mem(r2)) => {
+                let v = memory.get(registers.get16(r2));
+                registers.set8(r1, v);
+            },
+            Op::LoadIntoC00FF => {
+                let c = registers.get8(&registers::Registers8::C) as u16;
+                let a = registers.get8(&registers::Registers8::A);
+                memory.set(c + 0x00FF, a);
+            },
+            Op::Load8(Destination8::Mem(r1),Source8::R(r2)) => {
+                load_to_memory(registers, memory, r1, r2);
+            },
+            Op::Load8(_, _) => panic!("invalid args to load8"),
+            Op::Load16(Destination16::R(r1), Source16::R(r2)) => {
+                let v = registers.get16(r2);
+                registers.set16(r1, v);
+            },
+            Op::Load16(Destination16::R(r1), Source16::N) => {
+                registers.set16(r1, bytes::combine_little(args[0], args[1]));
+            },
+            Op::Inc8(Destination8::R(r)) => {
+                let v = registers.get8(r);
+                registers.set8(r, v + 1);
+            },
+            Op::Inc8(Destination8::Mem(r)) => {
+                let a = registers.get16(r);
+                let v = memory.get(a);
+                memory.set(a, v + 1);
+            },
+            Op::Inc8(_) => panic!("invalid inc arg"),
+            Op::Inc16(Destination16::R(r)) => {
+                let v = registers.get16(r);
+                registers.set16(r, v + 1);
+            },
+            Op::Dec8(Destination8::R(r)) => {
+                let v = registers.get8(r);
+                registers.set8(r, v - 1);
+            },
+            Op::Dec8(Destination8::Mem(r)) => {
+                let a = registers.get16(r);
+                let v = memory.get(a);
+                memory.set(a, v -1 );
+            },
+            Op::Dec8(_) => panic!("invalid dec arg"),
+
+            Op::Dec16(Destination16::R(r)) => {
+                let v = registers.get16(r);
+                registers.set16(r, v - 1);
+            }
+
+            Op::LoadAndDec => {
+                load_to_memory(registers, memory, &registers::Registers16::HL, &registers::Registers8::A);
+                registers.dec_hl();
+            },
+            Op::LoadAndInc => {
+                load_to_memory(registers, memory, &registers::Registers16::HL, &registers::Registers8::A);
+                registers.inc_hl();
+            },
+
+            Op::XOR(Destination8::R(r)) => {
+                let v = registers.get8(r);
+                let a = registers.get8(&registers::Registers8::A);
+                registers.set8(&registers::Registers8::A, a ^ v)
+            },
+            Op::XOR(Destination8::Mem(_)) => {},
+
+            Op::BIT(location, Destination8::R(r)) => {
+                let v = registers.get8(r);
+                if bytes::check_bit(v, *location) {
+                    memory.clear_flag(memory::Flag::Z);
+                } else {
+                    memory.set_flag(memory::Flag::Z);
+                }
+            },
+            Op::BIT(_, Destination8::Mem(_)) => {},
+
+            Op::JR(JrArgs::NZ) => {
+                if !memory.get_flag(memory::Flag::Z) {
+                    let v = args[0] as i8;
+                    let pc = registers.get16(&registers::Registers16::PC);
+                    registers.set16(&registers::Registers16::PC, bytes::add_unsigned_signed(pc, v))
+                }
+            },
+            Op::JR(_) => { },
+
+            Op::JP(_) => { },
         }
     }
 }
 
-impl Instruction {
-    pub fn call(&self, registers:&mut registers::Registers, memory:&mut memory::RAM, args:Vec<u8>) {
-        let op = &self.operation;
-        op(registers, memory, args)
-    }
-}
-
 pub struct Instructions {
-    instructions: Vec<Instruction>,
-    cb_instructions: Vec<Instruction>
+    instructions: Vec<Op>,
+    cb_instructions: Vec<Op>
 }
 
 impl Instructions {
-    pub fn get(&self, opcode:u8) -> &Instruction {
+    pub fn get(&self, opcode:u8) -> &Op {
         let o = opcode as usize;
         &self.instructions[o]
     }
 
-    pub fn get_cb(&self, opcode:u8) -> &Instruction {
+    pub fn get_cb(&self, opcode:u8) -> &Op {
         let o = opcode as usize;
         &self.cb_instructions[o]
     }
 }
 
-mod operations {
-    use ::memory;
-    use ::registers;
-    use ::bytes;
-
-    pub fn nop(_:&mut registers::Registers, _:&mut memory::RAM, _:Vec<u8>) {}
-
-    pub fn ld_a(registers:&mut registers::Registers, _:&mut memory::RAM, args:Vec<u8>) {
-        ld_u8_into(registers, registers::Registers8::A, args[0])
-    }
-
-    pub fn ld_c(registers:&mut registers::Registers, _:&mut memory::RAM, args:Vec<u8>) {
-        ld_u8_into(registers, registers::Registers8::C, args[0])
-    }
-
-    pub fn ld_sp(registers:&mut registers::Registers, _:&mut memory::RAM, args:Vec<u8>) {
-        ld_u16_into(registers, registers::Registers16::SP, args)
-    }
-
-    pub fn ld_hl(registers:&mut registers::Registers, _:&mut memory::RAM, args:Vec<u8>) {
-        ld_u16_into(registers, registers::Registers16::HL, args)
-    }
-
-
-    pub fn ldd_hl(registers:&mut registers::Registers, memory:&mut memory::RAM, _:Vec<u8>) {
-        let a = registers.get8(registers::Registers8::A);
-        let hl = registers.get16(registers::Registers16::HL);
-        println!("LDD HL - A: {:X} | HL: {:X} {:b}", a, hl, hl);
-        memory.set(hl, a);
-        registers.dec_hl();
-    }
-
-    pub fn xor_a(registers:&mut registers::Registers, _:&mut memory::RAM, args:Vec<u8>) {
-        println!("XOR A: {:?}", args);
-        let a = registers.get8(registers::Registers8::A);
-        registers.set8(registers::Registers8::A, a ^ a)
-    }
-
-    pub fn bit_7_h(registers:&mut registers::Registers, memory:&mut memory::RAM, args:Vec<u8>) {
-        let h = registers.get8(registers::Registers8::H);
-        println!("BIT 7,h: {:X} {:b}", h, h);
-        if bytes::check_bit(h, 7) {
-            memory.clear_flag(memory::Flag::Z);
-        } else {
-            println!("BIT 7,h; is zero");
-            memory.set_flag(memory::Flag::Z);
-        }
-    }
-
-    pub fn jr_nz(registers:&mut registers::Registers, memory:&mut memory::RAM, args:Vec<u8>) {
-        println!("JR NZ,e: {:?}", args);
-        if !memory.get_flag(memory::Flag::Z) {
-            let v = args[0] as i8;
-            let pc = registers.get16(registers::Registers16::PC);
-            // println!("JR: {}, {}", v, pc);
-            println!("JR: {}, {}, {}", v, pc, bytes::add_unsigned_signed(pc, v));
-            registers.set16(registers::Registers16::PC, bytes::add_unsigned_signed(pc, v))
-        }
-    }
-
-    fn ld_u8_into(registers:&mut registers::Registers, r:registers::Registers8, v:u8) {
-        registers.set8(r, v)
-    }
-
-    fn ld_u16_into(registers:&mut registers::Registers, r:registers::Registers16, args:Vec<u8>) {
-        let v = bytes::combine_little(args[0], args[1]);
-        println!("ld_u16_into: loading {:X}", v);
-        registers.set16(r, v)
-    }
-}
-
 pub fn new() -> Instructions {
-    let nop = Instruction {
-        operation: operations::nop,
-        args: 0,
-        label: String::from("NOP"),
-    };
+    let mut instructions = vec![Op::NOP;256];
 
-    let ld_c = Instruction {
-        operation: operations::ld_c,
-        args: 1,
-        label: String::from("LD C"),
-    };
+    instructions[0x000C] = Op::Inc8(Destination8::R(registers::Registers8::C));
+    instructions[0x000E] = Op::Load8(Destination8::R(registers::Registers8::C), Source8::N);
+    instructions[0x003E] = Op::Load8(Destination8::R(registers::Registers8::A), Source8::N);
+    instructions[0x0031] = Op::Load16(Destination16::R(registers::Registers16::SP), Source16::N);
+    instructions[0x0032] = Op::LoadAndDec;
+    instructions[0x0020] = Op::JR(JrArgs::NZ);
+    instructions[0x0021] = Op::Load16(Destination16::R(registers::Registers16::HL), Source16::N);
+    instructions[0x00AF] = Op::XOR(Destination8::R(registers::Registers8::A));
+    instructions[0x00E2] = Op::LoadIntoC00FF;
+    instructions[0x0077] = Op::Load8(Destination8::Mem(registers::Registers16::HL), Source8::R(registers::Registers8::A));
 
-    let ld_a = Instruction {
-        operation: operations::ld_a,
-        args: 1,
-        label: String::from("LD A"),
-    };
-
-    let ld_sp = Instruction {
-        operation: operations::ld_sp,
-        args: 2,
-        label: String::from("LD SP"),
-    };
-
-    let xor_a = Instruction {
-        operation: operations::xor_a,
-        args: 0,
-        label: String::from("XOR A"),
-    };
-
-    let ld_hl = Instruction {
-        operation: operations::ld_hl,
-        args: 2,
-        label: String::from("LD HL"),
-    };
-
-    let ldd_hl = Instruction {
-        operation: operations::ldd_hl,
-        args: 0,
-        label: String::from("LDD HL"),
-    };
-
-    let jr_nz = Instruction {
-        operation: operations::jr_nz,
-        args: 1,
-        label: String::from("JR NZ"),
-    };
-
-    let mut instructions = vec![nop;256];
-
-    instructions[0x000E] = ld_c;
-    instructions[0x0031] = ld_sp;
-    instructions[0x0032] = ldd_hl;
-    instructions[0x003E] = ld_a;
-    instructions[0x00AF] = xor_a;
-    instructions[0x0020] = jr_nz;
-    instructions[0x0021] = ld_hl;
-
-    let cb_nop = Instruction {
-        operation: operations::nop,
-        args: 0,
-        label: String::from("CB_NOP"),
-    };
-
-    let bit_7_h = Instruction {
-        operation: operations::bit_7_h,
-        args: 0,
-        label: String::from("BIT 7 H"),
-    };
-
-
-    let mut cb_instructions = vec![cb_nop;256];
-    cb_instructions[0x007C] = bit_7_h;
+    let mut cb_instructions = vec![Op::NOP;256];
+    cb_instructions[0x007C] = Op::BIT(7, Destination8::R(registers::Registers8::H));
 
     Instructions {
         instructions: instructions,
