@@ -50,6 +50,13 @@ pub enum JpArgs {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub enum LoadFF00Targets {
+    C,
+    N,
+    A,
+}
+
+#[derive(Debug, Clone, Copy)]
 pub enum Op {
     NOP,
     Load8(Destination8, Source8),
@@ -65,7 +72,7 @@ pub enum Op {
     XOR(Destination8),
     JR(JrArgs),
     JP(JpArgs),
-    LoadIntoC00FF,
+    LoadFF00(LoadFF00Targets, LoadFF00Targets),
 
     // CB extras
     BIT(u8, Destination8),
@@ -101,7 +108,9 @@ impl Op {
             Op::BIT(_, _) => 0,
             Op::JR(_) => 1,
             Op::JP(_) => 2,
-            Op::LoadIntoC00FF => 0,
+            Op::LoadFF00(_, LoadFF00Targets::N) => 1,
+            Op::LoadFF00(LoadFF00Targets::N, _) => 1,
+            Op::LoadFF00(_, _) => 0,
         }
     }
 
@@ -119,11 +128,6 @@ impl Op {
                 let v = memory.get(registers.get16(r2));
                 registers.set8(r1, v);
             },
-            Op::LoadIntoC00FF => {
-                let c = registers.get8(&registers::Registers8::C) as u16;
-                let a = registers.get8(&registers::Registers8::A);
-                memory.set(c + 0x00FF, a);
-            },
             Op::Load8(Destination8::Mem(r1),Source8::R(r2)) => {
                 load_to_memory(registers, memory, r1, r2);
             },
@@ -135,6 +139,28 @@ impl Op {
             Op::Load16(Destination16::R(r1), Source16::N) => {
                 registers.set16(r1, bytes::combine_little(args[0], args[1]));
             },
+            Op::LoadFF00(LoadFF00Targets::C, LoadFF00Targets::A)=> {
+                let c = registers.get8(&registers::Registers8::C) as u16;
+                let a = registers.get8(&registers::Registers8::A);
+                memory.set(c + 0xFF00, a);
+            },
+            Op::LoadFF00(LoadFF00Targets::A, LoadFF00Targets::C)=> {
+                let c = registers.get8(&registers::Registers8::C) as u16;
+                let v = memory.get(c + 0xFF00);
+                registers.set8(&registers::Registers8::A, v);
+            },
+            Op::LoadFF00(LoadFF00Targets::A, LoadFF00Targets::N)=> {
+                let ma = args[0] as u16;
+                let v = memory.get(ma + 0xFF00);
+                registers.set8(&registers::Registers8::A, v);
+            },
+            Op::LoadFF00(LoadFF00Targets::N, LoadFF00Targets::A)=> {
+                let a = registers.get8(&registers::Registers8::A);
+                let ma = args[0] as u16;
+                memory.set(ma + 0xFF00, a);
+            },
+            Op::LoadFF00(_, _)=> panic!("invalid loadFF00 inputs"),
+
             Op::Inc8(Destination8::R(r)) => {
                 let v = registers.get8(r);
                 registers.set8(r, v + 1);
@@ -144,11 +170,11 @@ impl Op {
                 let v = memory.get(a);
                 memory.set(a, v + 1);
             },
-            Op::Inc8(_) => panic!("invalid inc arg"),
             Op::Inc16(Destination16::R(r)) => {
                 let v = registers.get16(r);
                 registers.set16(r, v + 1);
             },
+
             Op::Dec8(Destination8::R(r)) => {
                 let v = registers.get8(r);
                 registers.set8(r, v - 1);
@@ -158,8 +184,6 @@ impl Op {
                 let v = memory.get(a);
                 memory.set(a, v -1 );
             },
-            Op::Dec8(_) => panic!("invalid dec arg"),
-
             Op::Dec16(Destination16::R(r)) => {
                 let v = registers.get16(r);
                 registers.set16(r, v - 1);
@@ -227,13 +251,16 @@ pub fn new() -> Instructions {
 
     instructions[0x000C] = Op::Inc8(Destination8::R(registers::Registers8::C));
     instructions[0x000E] = Op::Load8(Destination8::R(registers::Registers8::C), Source8::N);
+    instructions[0x0011] = Op::Load16(Destination16::R(registers::Registers16::DE), Source16::N);
     instructions[0x003E] = Op::Load8(Destination8::R(registers::Registers8::A), Source8::N);
+    instructions[0x001A] = Op::Load8(Destination8::R(registers::Registers8::A), Source8::Mem(registers::Registers16::DE));
     instructions[0x0031] = Op::Load16(Destination16::R(registers::Registers16::SP), Source16::N);
     instructions[0x0032] = Op::LoadAndDec;
     instructions[0x0020] = Op::JR(JrArgs::NZ);
     instructions[0x0021] = Op::Load16(Destination16::R(registers::Registers16::HL), Source16::N);
     instructions[0x00AF] = Op::XOR(Destination8::R(registers::Registers8::A));
-    instructions[0x00E2] = Op::LoadIntoC00FF;
+    instructions[0x00E2] = Op::LoadFF00(LoadFF00Targets::C, LoadFF00Targets::A);
+    instructions[0x00E0] = Op::LoadFF00(LoadFF00Targets::N, LoadFF00Targets::A);
     instructions[0x0077] = Op::Load8(Destination8::Mem(registers::Registers16::HL), Source8::R(registers::Registers8::A));
 
     let mut cb_instructions = vec![Op::NOP;256];

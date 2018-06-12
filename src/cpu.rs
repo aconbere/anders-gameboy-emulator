@@ -12,7 +12,7 @@ pub struct CPU <'a> {
 
 impl <'a> CPU <'a> {
     pub fn run(&mut self) {
-        for i in 0..2000 {
+        for i in 0..100 {
             self.next()
         }
     }
@@ -27,7 +27,6 @@ impl <'a> CPU <'a> {
         println!("\topcode: {:X}", opcode);
 
         let instruction = if opcode == 0x00CB {
-            println!("found cb opcode");
             let pc = self.registers.get16(&registers::Registers16::PC);
             let opcode = self.memory.get(pc);
             self.registers.inc_pc();
@@ -35,6 +34,7 @@ impl <'a> CPU <'a> {
         } else {
             self.instructions.get(opcode)
         };
+
         println!("\tinstruction: {:?}", instruction);
 
         let mut args = Vec::new();
@@ -43,6 +43,7 @@ impl <'a> CPU <'a> {
             args.push(self.memory.get(next));
             self.registers.inc_pc()
         }
+
         println!("\tcalling instruction: {:?} with args: {:X?}", instruction, args);
 
         instruction.call(&mut self.registers, &mut self.memory, args);
@@ -66,4 +67,3 @@ pub fn new<'a>(
         program:program
     }
 }
-
