@@ -5,7 +5,7 @@ use ::mmu;
 pub struct CPU <'a> {
     registers: &'a mut registers::Registers,
     instructions: &'a instructions::Instructions,
-    mmu: &'a mut mmu::MMU<'a>,
+    mmu: &'a mut mmu::MMU,
 }
 
 impl <'a> CPU <'a> {
@@ -51,7 +51,7 @@ impl <'a> CPU <'a> {
 pub fn new<'a>(
     registers:&'a mut registers::Registers,
     instructions:&'a instructions::Instructions,
-    mmu:&'a mut mmu::MMU<'a>,
+    mmu:&'a mut mmu::MMU,
 ) -> CPU <'a> {
     CPU {
         registers:registers,

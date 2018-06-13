@@ -23,8 +23,8 @@ pub static GBM_BOOT_ROM: [u8;256] = [
     0xF5, 0x06, 0x19, 0x78, 0x86, 0x23, 0x05, 0x20, 0xFB, 0x86, 0x00, 0x00, 0x3E, 0x01, 0xE0, 0x50
 ];
 
-pub struct MMU <'a> {
-    restart_and_interupt: device::RestartAndInterrupt<'a>,
+pub struct MMU {
+    restart_and_interupt: device::RestartAndInterrupt,
     cartridge_header: device::NotImplemented,
     cartridge_rom_bank_0: device::NotImplemented,
     cartridge_rom_bank_1: device::NotImplemented,
@@ -42,7 +42,7 @@ pub struct MMU <'a> {
     pub interupt_enable_flag: device::Flags,
 }
 
-impl <'a> MMU <'a> {
+impl <'a> MMU {
     pub fn get(&self, address:u16) -> u8 {
         let k = device::get_kind(address);
 
@@ -90,7 +90,7 @@ impl <'a> MMU <'a> {
     }
 }
 
-pub fn new<'a> () -> MMU <'a> {
+pub fn new() -> MMU {
     MMU {
         restart_and_interupt: device::RestartAndInterrupt{ storage: GBM_BOOT_ROM },
         cartridge_header: device::NotImplemented{},
@@ -216,11 +216,11 @@ pub mod device {
         }
     }
 
-    pub struct RestartAndInterrupt<'a> {
-        storage: &'a[u8; 256]
+    pub struct RestartAndInterrupt {
+        pub storage: [u8; 256]
     }
 
-    impl <'a> Device for RestartAndInterrupt <'a>{
+    impl Device for RestartAndInterrupt {
         fn get(&self, a:u16) -> u8 {
             self.storage[a as usize]
         }
