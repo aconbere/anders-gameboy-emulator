@@ -1,4 +1,10 @@
-pub static GBM_BOOT_ROM: &'static [u8] = &[
+/* Memory space mappings
+ * http://gameboy.mongenel.com/dmg/asmmemmap.html
+ */
+
+use mmu::device::Device;
+
+pub static GBM_BOOT_ROM: [u8;256] = [
     0x31, 0xFE, 0xFF, 0xAF, 0x21, 0xFF, 0x9F, 0x32, 0xCB, 0x7C, 0x20, 0xFB, 0x21, 0x26, 0xFF, 0x0E,
     0x11, 0x3E, 0x80, 0x32, 0xE2, 0x0C, 0x3E, 0xF3, 0xE2, 0x32, 0x3E, 0x77, 0x77, 0x3E, 0xFC, 0xE0,
     0x47, 0x11, 0x04, 0x01, 0x21, 0x10, 0x80, 0x1A, 0xCD, 0x95, 0x00, 0xCD, 0x96, 0x00, 0x13, 0x7B,
@@ -17,54 +23,108 @@ pub static GBM_BOOT_ROM: &'static [u8] = &[
     0xF5, 0x06, 0x19, 0x78, 0x86, 0x23, 0x05, 0x20, 0xFB, 0x86, 0x00, 0x00, 0x3E, 0x01, 0xE0, 0x50
 ];
 
-pub struct MMU {
-    devices:Vec<device::Device>
+pub struct MMU <'a> {
+    restart_and_interupt: device::RestartAndInterrupt<'a>,
+    cartridge_header: device::NotImplemented,
+    cartridge_rom_bank_0: device::NotImplemented,
+    cartridge_rom_bank_1: device::NotImplemented,
+    character_ram: device::NotImplemented,
+    background_map_data_1: device::NotImplemented,
+    background_map_data_2: device::NotImplemented,
+    cartridge_ram: device::NotImplemented,
+    internal_ram_bank_0: device::NotImplemented,
+    internal_ram_bank_1: device::NotImplemented,
+    echo_ram: device::NotImplemented,
+    object_attribute_memory: device::NotImplemented,
+    unusable_memory: device::NotImplemented,
+    hardware_io_registers: device::NotImplemented,
+    zero_page: device::NotImplemented,
+    pub interupt_enable_flag: device::Flags,
 }
 
-impl <'a> MMU {
+impl <'a> MMU <'a> {
     pub fn get(&self, address:u16) -> u8 {
-        let a = address as usize;
-        self.storage[a]
+        let k = device::get_kind(address);
+
+        match k {
+            device::Kind::RestartAndInterrupt => self.restart_and_interupt.get(address),
+            device::Kind::CartridgeHeader => self.cartridge_header.get(address),
+            device::Kind::CartridgeROMBank0 => self.cartridge_header.get(address),
+            device::Kind::CartridgeROMBank1 => self.cartridge_header.get(address),
+            device::Kind::CharacterRAM => self.cartridge_header.get(address),
+            device::Kind::BackgroundMapData1 => self.cartridge_header.get(address),
+            device::Kind::BackgroundMapData2 => self.cartridge_header.get(address),
+            device::Kind::CartridgeRAM => self.cartridge_header.get(address),
+            device::Kind::InternalRAMBank0 => self.cartridge_header.get(address),
+            device::Kind::InternalRAMBank1 => self.cartridge_header.get(address),
+            device::Kind::EchoRAM => self.cartridge_header.get(address),
+            device::Kind::ObjectAttributeMemory => self.cartridge_header.get(address),
+            device::Kind::UnusableMemory => self.cartridge_header.get(address),
+            device::Kind::HardwareIORegisters => self.cartridge_header.get(address),
+            device::Kind::ZeroPage => self.cartridge_header.get(address),
+            device::Kind::InterruptEnableFlag => self.cartridge_header.get(address),
+        }
     }
 
     pub fn set(&mut self, address:u16, v:u8) {
-        let a = address as usize;
-        self.storage[a] = v
-    }
+        let k = device::get_kind(address);
 
-    fn set_device(&self, kind:device::Kind, d:device::Device) {
-        self.devices[kind.get_index()] = d;
-    }
-
-    fn get_device(&self, kind:device::Kind) -> device::Device {
-        self.devices[kind.get_index()];
+        match k {
+            device::Kind::RestartAndInterrupt => self.restart_and_interupt.set(address, v),
+            device::Kind::CartridgeHeader => self.cartridge_header.set(address, v),
+            device::Kind::CartridgeROMBank0 => self.cartridge_rom_bank_0.set(address, v),
+            device::Kind::CartridgeROMBank1 => self.cartridge_rom_bank_1.set(address, v),
+            device::Kind::CharacterRAM => self.character_ram.set(address, v),
+            device::Kind::BackgroundMapData1 => self.background_map_data_1.set(address, v),
+            device::Kind::BackgroundMapData2 => self.background_map_data_2.set(address, v),
+            device::Kind::CartridgeRAM => self.cartridge_ram.set(address, v),
+            device::Kind::InternalRAMBank0 => self.internal_ram_bank_0.set(address, v),
+            device::Kind::InternalRAMBank1 => self.internal_ram_bank_1.set(address, v),
+            device::Kind::EchoRAM => self.echo_ram.set(address, v),
+            device::Kind::ObjectAttributeMemory => self.object_attribute_memory.set(address, v),
+            device::Kind::UnusableMemory => self.unusable_memory.set(address, v),
+            device::Kind::HardwareIORegisters => self.hardware_io_registers.set(address, v),
+            device::Kind::ZeroPage => self.zero_page.set(address, v),
+            device::Kind::InterruptEnableFlag => self.interupt_enable_flag.set(address, v),
+        }
     }
 }
 
-pub fn new() -> MMU {
+pub fn new<'a> () -> MMU <'a> {
     MMU {
-        devices:vec![device::NotImplemented{};16]
+        restart_and_interupt: device::RestartAndInterrupt{ storage: GBM_BOOT_ROM },
+        cartridge_header: device::NotImplemented{},
+        cartridge_rom_bank_0: device::NotImplemented{},
+        cartridge_rom_bank_1: device::NotImplemented{},
+        character_ram: device::NotImplemented{},
+        background_map_data_1: device::NotImplemented{},
+        background_map_data_2: device::NotImplemented{},
+        cartridge_ram: device::NotImplemented{},
+        internal_ram_bank_0: device::NotImplemented{},
+        internal_ram_bank_1: device::NotImplemented{},
+        echo_ram: device::NotImplemented{},
+        object_attribute_memory: device::NotImplemented{},
+        unusable_memory: device::NotImplemented{},
+        hardware_io_registers: device::NotImplemented{},
+        zero_page: device::NotImplemented{},
+        interupt_enable_flag: device::Flags{f:0x0000},
     }
 }
 
-pub fn initialize(&mut mmu:MMU) {
-    mmu.set_device(device::Kind::RestartAndInterrupt, device::GBMBootRom{})
-}
-
-mod device {
+pub mod device {
     use bytes;
 
     pub enum Kind {
         RestartAndInterrupt,
         CartridgeHeader,
         CartridgeROMBank0,
-        CartridgeROMBankSwitchable,
+        CartridgeROMBank1,
         CharacterRAM,
         BackgroundMapData1,
         BackgroundMapData2,
         CartridgeRAM,
         InternalRAMBank0,
-        InternalRAMBankSwitchable,
+        InternalRAMBank1,
         EchoRAM,
         ObjectAttributeMemory,
         UnusableMemory,
@@ -73,62 +133,42 @@ mod device {
         InterruptEnableFlag,
     }
 
-    fn get_kind(address:u16) -> Device {
+    pub fn get_kind(address:u16) -> Kind {
         match address {
             0x0000...0x00FF => Kind::RestartAndInterrupt,
             0x0100...0x014F => Kind::CartridgeHeader,
             0x0150...0x3FFF => Kind::CartridgeROMBank0,
-            0x4000...0x7FFF => Kind::CartridgeROMBankSwitchable,
+            0x4000...0x7FFF => Kind::CartridgeROMBank1,
             0x8000...0x97FF => Kind::CharacterRAM,
             0x9800...0x9BFF => Kind::BackgroundMapData1,
             0x9C00...0x9FFF => Kind::BackgroundMapData2,
             0xA000...0xBFFF => Kind::CartridgeRAM,
             0xC000...0xCFFF => Kind::InternalRAMBank0,
-            0xD000...0xDFFF => Kind::InternalRAMBankSwitchable,
+            0xD000...0xDFFF => Kind::InternalRAMBank1,
             0xE000...0xFDFF => Kind::EchoRAM,
             0xFE00...0xFE9F => Kind::ObjectAttributeMemory,
             0xFEA0...0xFEFF => Kind::UnusableMemory,
             0xFF00...0xFF7F => Kind::HardwareIORegisters,
             0xFF80...0xFFFE => Kind::ZeroPage,
             0xFFFF...0xFFFF => Kind::InterruptEnableFlag,
-        }
-    }
-
-    impl Kind {
-        pub fn get_index(&self) -> u8 {
-            match self {
-                Kind::RestartAndInterrupt => 1,
-                Kind::CartridgeHeader => 2,
-                Kind::CartridgeROMBank0 => 3,
-                Kind::CartridgeROMBankSwitchable => 4,
-                Kind::CharacterRAM => 5,
-                Kind::BackgroundMapData1 => 6,
-                Kind::BackgroundMapData2 => 7,
-                Kind::CartridgeRAM => 8,
-                Kind::InternalRAMBank0 => 9,
-                Kind::InternalRAMBankSwitchable => 10,
-                Kind::EchoRAM => 11,
-                Kind::ObjectAttributeMemory => 12,
-                Kind::UnusableMemory => 13,
-                Kind::HardwareIORegisters => 14,
-                Kind::ZeroPage => 15,
-                Kind::InterruptEnableFlag => 16
-            }
+            _ => panic!("WTF: address: {:X} isn't covered", address),
         }
     }
 
     pub trait Device {
         fn get(&self, a:u16) -> u8;
-        fn set(&self, a:u16, v:u8);
+        fn set(&mut self, a:u16, v:u8);
     }
 
-    pub struct NotImplemented {}
+    pub struct NotImplemented {
+    }
 
     impl Device for NotImplemented {
-        fn get(&self, a:u16) -> u8 {
+        fn get(&self, _:u16) -> u8 {
             panic!("Not Implemented")
         }
-        fn set(&self, a:u16, v:u8) {
+
+        fn set(&mut self, _:u16, _:u8) {
             panic!("Not Implemented")
         }
     }
@@ -141,50 +181,53 @@ mod device {
         pub fn get_index(&self) -> u8  {
             match self {
                 Flag::Z => 7,
-                _ => 0
             }
         }
     }
 
-
-
     pub struct Flags {
-        f: u8
+        pub f: u8
     }
 
     impl Device for Flags {
-        fn get(&self, a:u16) -> u8 {
+        fn get(&self, _:u16) -> u8 {
             self.f
         }
 
-        fn set(&self, a:u16, v:u8) {
+        fn set(&mut self, _:u16, v:u8) {
             self.f = v
         }
     }
 
     impl Flags {
-        pub fn get_flag(&mut self, f:Flags) -> bool {
+        pub fn get_flag(&mut self, f:Flag) -> bool {
             let i = f.get_index();
             return bytes::check_bit(self.f, i)
         }
 
-        pub fn set_flag(&mut self, f:Flags) {
+        pub fn set_flag(&mut self, f:Flag) {
             let i = f.get_index();
-            bytes::set_bit(self.f, i)
+            bytes::set_bit(self.f, i);
         }
 
         pub fn clear_flag(&self, f:Flag) {
-            let i = self.get_index(f);
-            bytes::clear_bit(self.f, i)
+            let i = f.get_index();
+            bytes::clear_bit(self.f, i);
         }
     }
 
-    pub struct GBMBootRom {}
+    pub struct RestartAndInterrupt<'a> {
+        storage: &'a[u8; 256]
+    }
+
+    impl <'a> Device for RestartAndInterrupt <'a>{
+        fn get(&self, a:u16) -> u8 {
+            self.storage[a as usize]
+        }
+
+        fn set(&mut self, a:u16, v:u8) {
+            self.storage[a as usize] = v;
+        }
+    }
+
 }
-
-/* Memory space mappings
- * http://gameboy.mongenel.com/dmg/asmmemmap.html
- */
-
-
-

@@ -1,13 +1,11 @@
 use ::registers;
 use ::instructions;
-use ::memory;
-use ::program;
+use ::mmu;
 
 pub struct CPU <'a> {
     registers: &'a mut registers::Registers,
     instructions: &'a instructions::Instructions,
-    memory: &'a mut memory::RAM,
-    program: &'a program::Program
+    mmu: &'a mut mmu::MMU<'a>,
 }
 
 impl <'a> CPU <'a> {
@@ -22,13 +20,13 @@ impl <'a> CPU <'a> {
         let pc = self.registers.get16(&registers::Registers16::PC);
         println!("\tpc: {}", pc);
 
-        let opcode = self.memory.get(pc);
+        let opcode = self.mmu.get(pc);
         self.registers.inc_pc();
         println!("\topcode: {:X}", opcode);
 
         let instruction = if opcode == 0x00CB {
             let pc = self.registers.get16(&registers::Registers16::PC);
-            let opcode = self.memory.get(pc);
+            let opcode = self.mmu.get(pc);
             self.registers.inc_pc();
             self.instructions.get_cb(opcode)
         } else {
@@ -40,30 +38,24 @@ impl <'a> CPU <'a> {
         let mut args = Vec::new();
         for _ in 0..instruction.args() {
             let next = self.registers.get16(&registers::Registers16::PC);
-            args.push(self.memory.get(next));
+            args.push(self.mmu.get(next));
             self.registers.inc_pc()
         }
 
         println!("\tcalling instruction: {:?} with args: {:X?}", instruction, args);
 
-        instruction.call(&mut self.registers, &mut self.memory, args);
-    }
-
-    pub fn dump_map(&mut self) {
-        self.memory.dump_map()
+        instruction.call(&mut self.registers, &mut self.mmu, args);
     }
 }
 
 pub fn new<'a>(
     registers:&'a mut registers::Registers,
     instructions:&'a instructions::Instructions,
-    memory:&'a mut memory::RAM,
-    program:&'a program::Program
+    mmu:&'a mut mmu::MMU<'a>,
 ) -> CPU <'a> {
     CPU {
         registers:registers,
         instructions:instructions,
-        memory:memory,
-        program:program
+        mmu:mmu,
     }
 }

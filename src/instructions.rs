@@ -1,4 +1,4 @@
-use ::memory;
+use ::mmu;
 use ::registers;
 use ::bytes;
 
@@ -81,13 +81,13 @@ pub enum Op {
 
 fn load_to_memory(
     registers:&mut registers::Registers,
-    memory:&mut memory::RAM,
+    mmu:&mut mmu::MMU,
     rm: &registers::Registers16,
     rv: &registers::Registers8,
 ) {
     let m = registers.get16(rm);
     let v = registers.get8(rv);
-    memory.set(m, v);
+    mmu.set(m, v);
 }
 
 impl Op {
@@ -114,7 +114,7 @@ impl Op {
         }
     }
 
-    pub fn call(&self, registers:&mut registers::Registers, memory:&mut memory::RAM, args:Vec<u8>) {
+    pub fn call(&self, registers:&mut registers::Registers, mmu:&mut mmu::MMU, args:Vec<u8>) {
         match self {
             Op::NOP => {},
             Op::Load8(Destination8::R(r1), Source8::R(r2)) => {
@@ -125,11 +125,11 @@ impl Op {
                 registers.set8(r1, args[0]);
             },
             Op::Load8(Destination8::R(r1), Source8::Mem(r2)) => {
-                let v = memory.get(registers.get16(r2));
+                let v = mmu.get(registers.get16(r2));
                 registers.set8(r1, v);
             },
             Op::Load8(Destination8::Mem(r1),Source8::R(r2)) => {
-                load_to_memory(registers, memory, r1, r2);
+                load_to_memory(registers, mmu, r1, r2);
             },
             Op::Load8(_, _) => panic!("invalid args to load8"),
             Op::Load16(Destination16::R(r1), Source16::R(r2)) => {
@@ -142,22 +142,22 @@ impl Op {
             Op::LoadFF00(LoadFF00Targets::C, LoadFF00Targets::A)=> {
                 let c = registers.get8(&registers::Registers8::C) as u16;
                 let a = registers.get8(&registers::Registers8::A);
-                memory.set(c + 0xFF00, a);
+                mmu.set(c + 0xFF00, a);
             },
             Op::LoadFF00(LoadFF00Targets::A, LoadFF00Targets::C)=> {
                 let c = registers.get8(&registers::Registers8::C) as u16;
-                let v = memory.get(c + 0xFF00);
+                let v = mmu.get(c + 0xFF00);
                 registers.set8(&registers::Registers8::A, v);
             },
             Op::LoadFF00(LoadFF00Targets::A, LoadFF00Targets::N)=> {
                 let ma = args[0] as u16;
-                let v = memory.get(ma + 0xFF00);
+                let v = mmu.get(ma + 0xFF00);
                 registers.set8(&registers::Registers8::A, v);
             },
             Op::LoadFF00(LoadFF00Targets::N, LoadFF00Targets::A)=> {
                 let a = registers.get8(&registers::Registers8::A);
                 let ma = args[0] as u16;
-                memory.set(ma + 0xFF00, a);
+                mmu.set(ma + 0xFF00, a);
             },
             Op::LoadFF00(_, _)=> panic!("invalid loadFF00 inputs"),
 
@@ -167,8 +167,8 @@ impl Op {
             },
             Op::Inc8(Destination8::Mem(r)) => {
                 let a = registers.get16(r);
-                let v = memory.get(a);
-                memory.set(a, v + 1);
+                let v = mmu.get(a);
+                mmu.set(a, v + 1);
             },
             Op::Inc16(Destination16::R(r)) => {
                 let v = registers.get16(r);
@@ -181,8 +181,8 @@ impl Op {
             },
             Op::Dec8(Destination8::Mem(r)) => {
                 let a = registers.get16(r);
-                let v = memory.get(a);
-                memory.set(a, v -1 );
+                let v = mmu.get(a);
+                mmu.set(a, v -1 );
             },
             Op::Dec16(Destination16::R(r)) => {
                 let v = registers.get16(r);
@@ -190,11 +190,11 @@ impl Op {
             }
 
             Op::LoadAndDec => {
-                load_to_memory(registers, memory, &registers::Registers16::HL, &registers::Registers8::A);
+                load_to_memory(registers, mmu, &registers::Registers16::HL, &registers::Registers8::A);
                 registers.dec_hl();
             },
             Op::LoadAndInc => {
-                load_to_memory(registers, memory, &registers::Registers16::HL, &registers::Registers8::A);
+                load_to_memory(registers, mmu, &registers::Registers16::HL, &registers::Registers8::A);
                 registers.inc_hl();
             },
 
@@ -208,15 +208,15 @@ impl Op {
             Op::BIT(location, Destination8::R(r)) => {
                 let v = registers.get8(r);
                 if bytes::check_bit(v, *location) {
-                    memory.clear_flag(memory::Flag::Z);
+                    mmu.interupt_enable_flag.clear_flag(mmu::device::Flag::Z);
                 } else {
-                    memory.set_flag(memory::Flag::Z);
+                    mmu.interupt_enable_flag.set_flag(mmu::device::Flag::Z);
                 }
             },
             Op::BIT(_, Destination8::Mem(_)) => {},
 
             Op::JR(JrArgs::NZ) => {
-                if !memory.get_flag(memory::Flag::Z) {
+                if !mmu.interupt_enable_flag.get_flag(mmu::device::Flag::Z) {
                     let v = args[0] as i8;
                     let pc = registers.get16(&registers::Registers16::PC);
                     registers.set16(&registers::Registers16::PC, bytes::add_unsigned_signed(pc, v))
