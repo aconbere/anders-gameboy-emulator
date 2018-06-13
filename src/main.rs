@@ -1,15 +1,15 @@
 mod bytes;
-mod memory;
 mod registers;
 mod instructions;
 mod program;
 mod cpu;
+mod mmu;
 
 fn main() {
     let mut registers = registers::new();
     let instructions = instructions::new();
-    let mut memory = memory::new();
 
+    let mut mmu = mmu::new();
     memory::initialize(&mut memory);
 
     let program = [0;512];
