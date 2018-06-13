@@ -137,7 +137,7 @@ impl Op {
                 registers.set16(r1, v);
             },
             Op::Load16(Destination16::R(r1), Source16::N) => {
-                registers.set16(r1, bytes::combine_little(args[0], args[1]));
+                registers.set16(r1, bytes::combine_big(args[0], args[1]));
             },
             Op::LoadFF00(LoadFF00Targets::C, LoadFF00Targets::A)=> {
                 let c = registers.get8(&registers::Registers8::C) as u16;

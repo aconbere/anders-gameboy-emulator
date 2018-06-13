@@ -8,6 +8,10 @@ pub fn combine_little(a:u8, b:u8) -> u16 {
     }
 }
 
+pub fn combine_big(a:u8, b:u8) -> u16 {
+    combine_little(b, a)
+}
+
 pub fn split_u16(a:u16) -> (u8, u8) {
     let high = (a >> 8) as u8;
     let low = a as u8;

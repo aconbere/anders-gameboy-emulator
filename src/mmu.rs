@@ -114,6 +114,7 @@ pub fn new() -> MMU {
 pub mod device {
     use bytes;
 
+    #[derive(Debug)]
     pub enum Kind {
         RestartAndInterrupt,
         CartridgeHeader,
@@ -164,12 +165,12 @@ pub mod device {
     }
 
     impl Device for NotImplemented {
-        fn get(&self, _:u16) -> u8 {
-            panic!("Not Implemented")
+        fn get(&self, a:u16) -> u8 {
+            panic!("Device: {:?} with address {:X} is not implemented.", get_kind(a), a)
         }
 
-        fn set(&mut self, _:u16, _:u8) {
-            panic!("Not Implemented")
+        fn set(&mut self, a:u16, _:u8) {
+            panic!("Device: {:?} with address {:X} is not implemented.", get_kind(a), a)
         }
     }
 
