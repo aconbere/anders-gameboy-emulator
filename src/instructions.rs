@@ -1,6 +1,7 @@
 use ::mmu;
 use ::registers;
 use ::bytes;
+use device;
 
 /*
  * LD r,r
@@ -208,15 +209,15 @@ impl Op {
             Op::BIT(location, Destination8::R(r)) => {
                 let v = registers.get8(r);
                 if bytes::check_bit(v, *location) {
-                    mmu.interupt_enable_flag.clear_flag(mmu::device::Flag::Z);
+                    mmu.interupt_enable_flag.clear_flag(device::flags::Flag::Z);
                 } else {
-                    mmu.interupt_enable_flag.set_flag(mmu::device::Flag::Z);
+                    mmu.interupt_enable_flag.set_flag(device::flags::Flag::Z);
                 }
             },
             Op::BIT(_, Destination8::Mem(_)) => {},
 
             Op::JR(JrArgs::NZ) => {
-                if !mmu.interupt_enable_flag.get_flag(mmu::device::Flag::Z) {
+                if !mmu.interupt_enable_flag.get_flag(device::flags::Flag::Z) {
                     let v = args[0] as i8;
                     let pc = registers.get16(&registers::Registers16::PC);
                     registers.set16(&registers::Registers16::PC, bytes::add_unsigned_signed(pc, v))

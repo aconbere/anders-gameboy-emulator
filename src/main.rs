@@ -4,6 +4,7 @@ mod instructions;
 mod program;
 mod cpu;
 mod mmu;
+mod device;
 
 fn main() {
     let mut registers = registers::new();

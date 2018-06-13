@@ -2,7 +2,8 @@
  * http://gameboy.mongenel.com/dmg/asmmemmap.html
  */
 
-use mmu::device::Device;
+use device;
+use device::Device;
 
 pub static GBM_BOOT_ROM: [u8;256] = [
     0x31, 0xFE, 0xFF, 0xAF, 0x21, 0xFF, 0x9F, 0x32, 0xCB, 0x7C, 0x20, 0xFB, 0x21, 0x26, 0xFF, 0x0E,
@@ -24,22 +25,22 @@ pub static GBM_BOOT_ROM: [u8;256] = [
 ];
 
 pub struct MMU {
-    restart_and_interupt: device::RestartAndInterrupt,
-    cartridge_header: device::NotImplemented,
-    cartridge_rom_bank_0: device::NotImplemented,
-    cartridge_rom_bank_1: device::NotImplemented,
-    character_ram: device::NotImplemented,
-    background_map_data_1: device::NotImplemented,
-    background_map_data_2: device::NotImplemented,
-    cartridge_ram: device::NotImplemented,
-    internal_ram_bank_0: device::NotImplemented,
-    internal_ram_bank_1: device::NotImplemented,
-    echo_ram: device::NotImplemented,
-    object_attribute_memory: device::NotImplemented,
-    unusable_memory: device::NotImplemented,
-    hardware_io_registers: device::NotImplemented,
-    zero_page: device::NotImplemented,
-    pub interupt_enable_flag: device::Flags,
+    restart_and_interupt: device::restart_and_interrupt::RestartAndInterrupt,
+    cartridge_header: device::not_implemented::NotImplemented,
+    cartridge_rom_bank_0: device::not_implemented::NotImplemented,
+    cartridge_rom_bank_1: device::not_implemented::NotImplemented,
+    character_ram: device::not_implemented::NotImplemented,
+    background_map_data_1: device::not_implemented::NotImplemented,
+    background_map_data_2: device::not_implemented::NotImplemented,
+    cartridge_ram: device::not_implemented::NotImplemented,
+    internal_ram_bank_0: device::not_implemented::NotImplemented,
+    internal_ram_bank_1: device::not_implemented::NotImplemented,
+    echo_ram: device::not_implemented::NotImplemented,
+    object_attribute_memory: device::not_implemented::NotImplemented,
+    unusable_memory: device::not_implemented::NotImplemented,
+    hardware_io_registers: device::not_implemented::NotImplemented,
+    zero_page: device::not_implemented::NotImplemented,
+    pub interupt_enable_flag: device::flags::Flags,
 }
 
 impl <'a> MMU {
@@ -92,143 +93,22 @@ impl <'a> MMU {
 
 pub fn new() -> MMU {
     MMU {
-        restart_and_interupt: device::RestartAndInterrupt{ storage: GBM_BOOT_ROM },
-        cartridge_header: device::NotImplemented{},
-        cartridge_rom_bank_0: device::NotImplemented{},
-        cartridge_rom_bank_1: device::NotImplemented{},
-        character_ram: device::NotImplemented{},
-        background_map_data_1: device::NotImplemented{},
-        background_map_data_2: device::NotImplemented{},
-        cartridge_ram: device::NotImplemented{},
-        internal_ram_bank_0: device::NotImplemented{},
-        internal_ram_bank_1: device::NotImplemented{},
-        echo_ram: device::NotImplemented{},
-        object_attribute_memory: device::NotImplemented{},
-        unusable_memory: device::NotImplemented{},
-        hardware_io_registers: device::NotImplemented{},
-        zero_page: device::NotImplemented{},
-        interupt_enable_flag: device::Flags{f:0x0000},
+        restart_and_interupt: device::restart_and_interrupt::RestartAndInterrupt{ storage: GBM_BOOT_ROM },
+        cartridge_header: device::not_implemented::NotImplemented{},
+        cartridge_rom_bank_0: device::not_implemented::NotImplemented{},
+        cartridge_rom_bank_1: device::not_implemented::NotImplemented{},
+        character_ram: device::not_implemented::NotImplemented{},
+        background_map_data_1: device::not_implemented::NotImplemented{},
+        background_map_data_2: device::not_implemented::NotImplemented{},
+        cartridge_ram: device::not_implemented::NotImplemented{},
+        internal_ram_bank_0: device::not_implemented::NotImplemented{},
+        internal_ram_bank_1: device::not_implemented::NotImplemented{},
+        echo_ram: device::not_implemented::NotImplemented{},
+        object_attribute_memory: device::not_implemented::NotImplemented{},
+        unusable_memory: device::not_implemented::NotImplemented{},
+        hardware_io_registers: device::not_implemented::NotImplemented{},
+        zero_page: device::not_implemented::NotImplemented{},
+        interupt_enable_flag: device::flags::Flags{f:0x0000},
     }
 }
 
-pub mod device {
-    use bytes;
-
-    #[derive(Debug)]
-    pub enum Kind {
-        RestartAndInterrupt,
-        CartridgeHeader,
-        CartridgeROMBank0,
-        CartridgeROMBank1,
-        CharacterRAM,
-        BackgroundMapData1,
-        BackgroundMapData2,
-        CartridgeRAM,
-        InternalRAMBank0,
-        InternalRAMBank1,
-        EchoRAM,
-        ObjectAttributeMemory,
-        UnusableMemory,
-        HardwareIORegisters,
-        ZeroPage,
-        InterruptEnableFlag,
-    }
-
-    pub fn get_kind(address:u16) -> Kind {
-        match address {
-            0x0000...0x00FF => Kind::RestartAndInterrupt,
-            0x0100...0x014F => Kind::CartridgeHeader,
-            0x0150...0x3FFF => Kind::CartridgeROMBank0,
-            0x4000...0x7FFF => Kind::CartridgeROMBank1,
-            0x8000...0x97FF => Kind::CharacterRAM,
-            0x9800...0x9BFF => Kind::BackgroundMapData1,
-            0x9C00...0x9FFF => Kind::BackgroundMapData2,
-            0xA000...0xBFFF => Kind::CartridgeRAM,
-            0xC000...0xCFFF => Kind::InternalRAMBank0,
-            0xD000...0xDFFF => Kind::InternalRAMBank1,
-            0xE000...0xFDFF => Kind::EchoRAM,
-            0xFE00...0xFE9F => Kind::ObjectAttributeMemory,
-            0xFEA0...0xFEFF => Kind::UnusableMemory,
-            0xFF00...0xFF7F => Kind::HardwareIORegisters,
-            0xFF80...0xFFFE => Kind::ZeroPage,
-            0xFFFF...0xFFFF => Kind::InterruptEnableFlag,
-            _ => panic!("WTF: address: {:X} isn't covered", address),
-        }
-    }
-
-    pub trait Device {
-        fn get(&self, a:u16) -> u8;
-        fn set(&mut self, a:u16, v:u8);
-    }
-
-    pub struct NotImplemented {
-    }
-
-    impl Device for NotImplemented {
-        fn get(&self, a:u16) -> u8 {
-            panic!("Device: {:?} with address {:X} is not implemented.", get_kind(a), a)
-        }
-
-        fn set(&mut self, a:u16, _:u8) {
-            panic!("Device: {:?} with address {:X} is not implemented.", get_kind(a), a)
-        }
-    }
-
-    pub enum Flag {
-        Z
-    }
-
-    impl Flag {
-        pub fn get_index(&self) -> u8  {
-            match self {
-                Flag::Z => 7,
-            }
-        }
-    }
-
-    pub struct Flags {
-        pub f: u8
-    }
-
-    impl Device for Flags {
-        fn get(&self, _:u16) -> u8 {
-            self.f
-        }
-
-        fn set(&mut self, _:u16, v:u8) {
-            self.f = v
-        }
-    }
-
-    impl Flags {
-        pub fn get_flag(&mut self, f:Flag) -> bool {
-            let i = f.get_index();
-            return bytes::check_bit(self.f, i)
-        }
-
-        pub fn set_flag(&mut self, f:Flag) {
-            let i = f.get_index();
-            bytes::set_bit(self.f, i);
-        }
-
-        pub fn clear_flag(&self, f:Flag) {
-            let i = f.get_index();
-            bytes::clear_bit(self.f, i);
-        }
-    }
-
-    pub struct RestartAndInterrupt {
-        pub storage: [u8; 256]
-    }
-
-    impl Device for RestartAndInterrupt {
-        fn get(&self, a:u16) -> u8 {
-            self.storage[a as usize]
-        }
-
-        fn set(&mut self, a:u16, v:u8) {
-            self.storage[a as usize] = v;
-        }
-    }
-
-}
