@@ -2,13 +2,19 @@ use bytes;
 use device;
 
 pub enum Flag {
-    Z
+    Z,
+    C,
+    N,
+    H,
 }
 
 impl Flag {
     pub fn get_index(&self) -> u8  {
         match self {
             Flag::Z => 7,
+            Flag::N => 6,
+            Flag::H => 5,
+            Flag::C => 4,
         }
     }
 }
@@ -28,18 +34,17 @@ impl device::Device for Flags {
 }
 
 impl Flags {
-    pub fn get_flag(&mut self, f:Flag) -> bool {
+    pub fn get_flag(&self, f:Flag) -> bool {
         let i = f.get_index();
-        return bytes::check_bit(self.f, i)
+        bytes::check_bit(self.f, i)
     }
 
     pub fn set_flag(&mut self, f:Flag) {
-        let i = f.get_index();
-        bytes::set_bit(self.f, i);
+        self.f = bytes::set_bit(self.f, f.get_index());
     }
 
-    pub fn clear_flag(&self, f:Flag) {
-        let i = f.get_index();
-        bytes::clear_bit(self.f, i);
+    pub fn clear_flag(&mut self, f:Flag) {
+        self.f = bytes::clear_bit(self.f, f.get_index());
     }
+
 }

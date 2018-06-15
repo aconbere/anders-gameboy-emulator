@@ -3,6 +3,7 @@
  */
 
 use device;
+use bytes;
 use device::Device;
 
 pub static GBM_BOOT_ROM: [u8;256] = [
@@ -26,44 +27,66 @@ pub static GBM_BOOT_ROM: [u8;256] = [
 
 pub struct MMU {
     restart_and_interupt: device::restart_and_interrupt::RestartAndInterrupt,
-    cartridge_header: device::not_implemented::NotImplemented,
-    cartridge_rom_bank_0: device::not_implemented::NotImplemented,
-    cartridge_rom_bank_1: device::not_implemented::NotImplemented,
-    character_ram: device::not_implemented::NotImplemented,
-    background_map_data_1: device::not_implemented::NotImplemented,
-    background_map_data_2: device::not_implemented::NotImplemented,
+
+    // cartridge
+    cartridge: device::cartridge::Cartridge,
+    // cartridge_header: device::not_implemented::NotImplemented,
+    // cartridge_rom_bank_0: device::not_implemented::NotImplemented,
+    // cartridge_rom_bank_1: device::not_implemented::NotImplemented,
+
+    video_ram: device::vram::VRam,
     cartridge_ram: device::not_implemented::NotImplemented,
     internal_ram_bank_0: device::not_implemented::NotImplemented,
     internal_ram_bank_1: device::not_implemented::NotImplemented,
     echo_ram: device::not_implemented::NotImplemented,
     object_attribute_memory: device::not_implemented::NotImplemented,
     unusable_memory: device::not_implemented::NotImplemented,
-    hardware_io_registers: device::not_implemented::NotImplemented,
-    zero_page: device::not_implemented::NotImplemented,
+    hardware_io_registers: device::hardware_io::HardwareIO,
+    zero_page: device::zero_page::ZeroPage,
     pub interupt_enable_flag: device::flags::Flags,
 }
 
 impl <'a> MMU {
+    pub fn set_flag(&mut self, f:device::flags::Flag, v:bool) {
+        if v {
+            self.interupt_enable_flag.set_flag(f);
+        } else {
+            self.interupt_enable_flag.clear_flag(f);
+        }
+    }
+
+    pub fn get_flag(&self, f:device::flags::Flag) -> bool {
+        self.interupt_enable_flag.get_flag(f)
+    }
+
+
+    pub fn get16(&self, address:u16) -> u16 {
+        let mh = self.get(address);
+        let ml = self.get(address + 1);
+        bytes::combine_little(mh, ml)
+    }
+
     pub fn get(&self, address:u16) -> u8 {
         let k = device::get_kind(address);
 
         match k {
             device::Kind::RestartAndInterrupt => self.restart_and_interupt.get(address),
-            device::Kind::CartridgeHeader => self.cartridge_header.get(address),
-            device::Kind::CartridgeROMBank0 => self.cartridge_header.get(address),
-            device::Kind::CartridgeROMBank1 => self.cartridge_header.get(address),
-            device::Kind::CharacterRAM => self.cartridge_header.get(address),
-            device::Kind::BackgroundMapData1 => self.cartridge_header.get(address),
-            device::Kind::BackgroundMapData2 => self.cartridge_header.get(address),
-            device::Kind::CartridgeRAM => self.cartridge_header.get(address),
-            device::Kind::InternalRAMBank0 => self.cartridge_header.get(address),
-            device::Kind::InternalRAMBank1 => self.cartridge_header.get(address),
-            device::Kind::EchoRAM => self.cartridge_header.get(address),
-            device::Kind::ObjectAttributeMemory => self.cartridge_header.get(address),
-            device::Kind::UnusableMemory => self.cartridge_header.get(address),
-            device::Kind::HardwareIORegisters => self.cartridge_header.get(address),
-            device::Kind::ZeroPage => self.cartridge_header.get(address),
-            device::Kind::InterruptEnableFlag => self.cartridge_header.get(address),
+
+            device::Kind::CartridgeHeader | device::Kind::CartridgeROMBank0 | device::Kind::CartridgeROMBank1 =>
+                self.cartridge.get(address),
+
+            device::Kind::CharacterRAM | device::Kind::BackgroundMapData1 | device::Kind::BackgroundMapData2 =>
+                self.video_ram.get(address - 0x8000),
+
+            device::Kind::CartridgeRAM => self.cartridge_ram.get(address),
+            device::Kind::InternalRAMBank0 => self.internal_ram_bank_0.get(address),
+            device::Kind::InternalRAMBank1 => self.internal_ram_bank_1.get(address),
+            device::Kind::EchoRAM => self.echo_ram.get(address),
+            device::Kind::ObjectAttributeMemory => self.object_attribute_memory.get(address),
+            device::Kind::UnusableMemory => self.unusable_memory.get(address),
+            device::Kind::HardwareIORegisters => self.hardware_io_registers.get(address - 0xFF00),
+            device::Kind::ZeroPage => self.zero_page.get(address - 0xFF80),
+            device::Kind::InterruptEnableFlag => self.interupt_enable_flag.get(address),
         }
     }
 
@@ -72,42 +95,39 @@ impl <'a> MMU {
 
         match k {
             device::Kind::RestartAndInterrupt => self.restart_and_interupt.set(address, v),
-            device::Kind::CartridgeHeader => self.cartridge_header.set(address, v),
-            device::Kind::CartridgeROMBank0 => self.cartridge_rom_bank_0.set(address, v),
-            device::Kind::CartridgeROMBank1 => self.cartridge_rom_bank_1.set(address, v),
-            device::Kind::CharacterRAM => self.character_ram.set(address, v),
-            device::Kind::BackgroundMapData1 => self.background_map_data_1.set(address, v),
-            device::Kind::BackgroundMapData2 => self.background_map_data_2.set(address, v),
+            device::Kind::CartridgeHeader | device::Kind::CartridgeROMBank0 | device::Kind::CartridgeROMBank1 =>
+                self.cartridge.set(address, v),
+
+            device::Kind::CharacterRAM | device::Kind::BackgroundMapData1 | device::Kind::BackgroundMapData2 =>
+                self.video_ram.set(address - 0x8000, v),
+
             device::Kind::CartridgeRAM => self.cartridge_ram.set(address, v),
             device::Kind::InternalRAMBank0 => self.internal_ram_bank_0.set(address, v),
             device::Kind::InternalRAMBank1 => self.internal_ram_bank_1.set(address, v),
             device::Kind::EchoRAM => self.echo_ram.set(address, v),
             device::Kind::ObjectAttributeMemory => self.object_attribute_memory.set(address, v),
             device::Kind::UnusableMemory => self.unusable_memory.set(address, v),
-            device::Kind::HardwareIORegisters => self.hardware_io_registers.set(address, v),
-            device::Kind::ZeroPage => self.zero_page.set(address, v),
+            device::Kind::HardwareIORegisters => self.hardware_io_registers.set(address - 0xFF00, v),
+            device::Kind::ZeroPage => self.zero_page.set(address - 0xFF80, v),
             device::Kind::InterruptEnableFlag => self.interupt_enable_flag.set(address, v),
         }
     }
 }
 
-pub fn new() -> MMU {
+pub fn new(cartridge:device::cartridge::Cartridge) -> MMU {
+
     MMU {
         restart_and_interupt: device::restart_and_interrupt::RestartAndInterrupt{ storage: GBM_BOOT_ROM },
-        cartridge_header: device::not_implemented::NotImplemented{},
-        cartridge_rom_bank_0: device::not_implemented::NotImplemented{},
-        cartridge_rom_bank_1: device::not_implemented::NotImplemented{},
-        character_ram: device::not_implemented::NotImplemented{},
-        background_map_data_1: device::not_implemented::NotImplemented{},
-        background_map_data_2: device::not_implemented::NotImplemented{},
+        cartridge: cartridge,
+        video_ram: device::vram::VRam{storage: [0;8192]},
         cartridge_ram: device::not_implemented::NotImplemented{},
         internal_ram_bank_0: device::not_implemented::NotImplemented{},
         internal_ram_bank_1: device::not_implemented::NotImplemented{},
         echo_ram: device::not_implemented::NotImplemented{},
         object_attribute_memory: device::not_implemented::NotImplemented{},
         unusable_memory: device::not_implemented::NotImplemented{},
-        hardware_io_registers: device::not_implemented::NotImplemented{},
-        zero_page: device::not_implemented::NotImplemented{},
+        hardware_io_registers: device::hardware_io::HardwareIO{storage: [0;128]},
+        zero_page: device::zero_page::ZeroPage{storage: [0;127]},
         interupt_enable_flag: device::flags::Flags{f:0x0000},
     }
 }

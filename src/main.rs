@@ -1,7 +1,6 @@
 mod bytes;
 mod registers;
 mod instructions;
-mod program;
 mod cpu;
 mod mmu;
 mod device;
@@ -9,7 +8,8 @@ mod device;
 fn main() {
     let mut registers = registers::new();
     let instructions = instructions::new();
-    let mut mmu = mmu::new();
+    let cartridge = device::cartridge::load_from_file(String::from("/Users/anders/Projects/gb_test_roms/sheepitup.gb"));
+    let mut mmu = mmu::new(cartridge);
     let mut cpu = cpu::new(&mut registers, &instructions, &mut mmu);
     cpu.run();
     //cpu.dump_map();

@@ -10,12 +10,12 @@ pub struct CPU <'a> {
 
 impl <'a> CPU <'a> {
     pub fn run(&mut self) {
-        for i in 0..100 {
-            self.next()
+        for i in 0..2000 {
+            self.next(i)
         }
     }
-    pub fn next(&mut self) {
-        println!("TICK");
+    pub fn next(&mut self, i:u16) {
+        println!("TICK {}", i);
 
         let pc = self.registers.get16(&registers::Registers16::PC);
         println!("\tpc: {}", pc);
@@ -27,6 +27,7 @@ impl <'a> CPU <'a> {
         let instruction = if opcode == 0x00CB {
             let pc = self.registers.get16(&registers::Registers16::PC);
             let opcode = self.mmu.get(pc);
+            println!("\tcb opcode: {:X}", opcode);
             self.registers.inc_pc();
             self.instructions.get_cb(opcode)
         } else {

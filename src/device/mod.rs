@@ -1,6 +1,10 @@
 pub mod not_implemented;
 pub mod flags;
 pub mod restart_and_interrupt;
+pub mod vram;
+pub mod hardware_io;
+pub mod cartridge;
+pub mod zero_page;
 
 #[derive(Debug)]
 pub enum Kind {
@@ -25,6 +29,8 @@ pub enum Kind {
 pub fn get_kind(address:u16) -> Kind {
     match address {
         0x0000...0x00FF => Kind::RestartAndInterrupt,
+
+        // Cartridge
         0x0100...0x014F => Kind::CartridgeHeader,
         0x0150...0x3FFF => Kind::CartridgeROMBank0,
         0x4000...0x7FFF => Kind::CartridgeROMBank1,

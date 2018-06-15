@@ -32,20 +32,28 @@ pub enum Destination16 {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum JrArgs {
+pub enum CheckFlag {
     Z,
     NZ,
     C,
     NC,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum CallArgs {
+    CheckFlag(CheckFlag),
+    N
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum JrArgs {
+    CheckFlag(CheckFlag),
     N
 }
 
 #[derive(Debug, Clone, Copy)]
 pub enum JpArgs {
-    Z,
-    NZ,
-    C,
-    NC,
+    CheckFlag(CheckFlag),
     N,
     HL
 }
@@ -58,7 +66,14 @@ pub enum LoadFF00Targets {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub enum RetArgs {
+    CheckFlag(CheckFlag),
+    Null,
+}
+
+#[derive(Debug, Clone, Copy)]
 pub enum Op {
+    NotImplemented,
     NOP,
     Load8(Destination8, Source8),
     Load16(Destination16, Source16),
@@ -74,10 +89,15 @@ pub enum Op {
     JR(JrArgs),
     JP(JpArgs),
     LoadFF00(LoadFF00Targets, LoadFF00Targets),
+    Call(CallArgs),
+    Pop(registers::Registers16),
+    Push(registers::Registers16),
+    Ret(RetArgs),
+    Compare(Source8),
 
     // CB extras
     BIT(u8, Destination8),
-
+    RL(Destination8)
 }
 
 fn load_to_memory(
@@ -91,9 +111,34 @@ fn load_to_memory(
     mmu.set(m, v);
 }
 
+fn push_stack(
+    registers:&mut registers::Registers,
+    mmu:&mut mmu::MMU,
+    r: &registers::Registers16
+) {
+    let sp = registers.get16(&registers::Registers16::SP);
+    let v = registers.get16(r);
+    let (vh, vl) = bytes::split_u16(v);
+    mmu.set(sp - 1, vh);
+    mmu.set(sp - 2, vl);
+    registers.set16(&registers::Registers16::SP, sp-2);
+}
+
+fn pop_stack(
+    registers:&mut registers::Registers,
+    mmu:&mut mmu::MMU,
+    r: &registers::Registers16
+) {
+    let sp = registers.get16(&registers::Registers16::SP);
+    let v = mmu.get16(sp);
+    registers.set16(r, v);
+    registers.set16(&registers::Registers16::SP, sp+2);
+}
+
 impl Op {
     pub fn args(&self) -> u8 {
         match self {
+            Op::NotImplemented => 0,
             Op::NOP => 0,
             Op::Load8(_, Source8::N) => 1,
             Op::Load8(_, _) => 0,
@@ -106,17 +151,27 @@ impl Op {
             Op::LoadAndInc => 0,
             Op::LoadAndDec => 0,
             Op::XOR(_) => 0,
-            Op::BIT(_, _) => 0,
             Op::JR(_) => 1,
             Op::JP(_) => 2,
             Op::LoadFF00(_, LoadFF00Targets::N) => 1,
             Op::LoadFF00(LoadFF00Targets::N, _) => 1,
             Op::LoadFF00(_, _) => 0,
+            Op::Call(_) => 2,
+            Op::Push(_) => 0,
+            Op::Pop(_) => 0,
+            Op::Ret(_) => 0,
+            Op::Compare(Source8::N) => 1,
+            Op::Compare(_) => 0,
+
+            // cb instructions
+            Op::BIT(_, _) => 0,
+            Op::RL(_) => 0,
         }
     }
 
     pub fn call(&self, registers:&mut registers::Registers, mmu:&mut mmu::MMU, args:Vec<u8>) {
         match self {
+            Op::NotImplemented => panic!("NotImplemented Instruction"),
             Op::NOP => {},
             Op::Load8(Destination8::R(r1), Source8::R(r2)) => {
                 let v = registers.get8(r2);
@@ -138,7 +193,7 @@ impl Op {
                 registers.set16(r1, v);
             },
             Op::Load16(Destination16::R(r1), Source16::N) => {
-                registers.set16(r1, bytes::combine_big(args[0], args[1]));
+                registers.set16(r1, bytes::combine_little(args[0], args[1]));
             },
             Op::LoadFF00(LoadFF00Targets::C, LoadFF00Targets::A)=> {
                 let c = registers.get8(&registers::Registers8::C) as u16;
@@ -162,34 +217,6 @@ impl Op {
             },
             Op::LoadFF00(_, _)=> panic!("invalid loadFF00 inputs"),
 
-            Op::Inc8(Destination8::R(r)) => {
-                let v = registers.get8(r);
-                registers.set8(r, v + 1);
-            },
-            Op::Inc8(Destination8::Mem(r)) => {
-                let a = registers.get16(r);
-                let v = mmu.get(a);
-                mmu.set(a, v + 1);
-            },
-            Op::Inc16(Destination16::R(r)) => {
-                let v = registers.get16(r);
-                registers.set16(r, v + 1);
-            },
-
-            Op::Dec8(Destination8::R(r)) => {
-                let v = registers.get8(r);
-                registers.set8(r, v - 1);
-            },
-            Op::Dec8(Destination8::Mem(r)) => {
-                let a = registers.get16(r);
-                let v = mmu.get(a);
-                mmu.set(a, v -1 );
-            },
-            Op::Dec16(Destination16::R(r)) => {
-                let v = registers.get16(r);
-                registers.set16(r, v - 1);
-            }
-
             Op::LoadAndDec => {
                 load_to_memory(registers, mmu, &registers::Registers16::HL, &registers::Registers8::A);
                 registers.dec_hl();
@@ -199,33 +226,158 @@ impl Op {
                 registers.inc_hl();
             },
 
-            Op::XOR(Destination8::R(r)) => {
-                let v = registers.get8(r);
-                let a = registers.get8(&registers::Registers8::A);
-                registers.set8(&registers::Registers8::A, a ^ v)
-            },
-            Op::XOR(Destination8::Mem(_)) => {},
-
-            Op::BIT(location, Destination8::R(r)) => {
-                let v = registers.get8(r);
-                if bytes::check_bit(v, *location) {
-                    mmu.interupt_enable_flag.clear_flag(device::flags::Flag::Z);
-                } else {
-                    mmu.interupt_enable_flag.set_flag(device::flags::Flag::Z);
-                }
-            },
-            Op::BIT(_, Destination8::Mem(_)) => {},
-
-            Op::JR(JrArgs::NZ) => {
+            Op::JR(JrArgs::CheckFlag(CheckFlag::NZ)) => {
                 if !mmu.interupt_enable_flag.get_flag(device::flags::Flag::Z) {
+                    println!("JR: flag unset!");
                     let v = args[0] as i8;
                     let pc = registers.get16(&registers::Registers16::PC);
                     registers.set16(&registers::Registers16::PC, bytes::add_unsigned_signed(pc, v))
+                } else {
+                    println!("JR: flag set!");
                 }
             },
-            Op::JR(_) => { },
+            Op::JR(_) => panic!("Not Implemented"),
+            Op::JP(_) => panic!("Not Implemented"),
+            Op::Call(CallArgs::N) => {
+                push_stack(registers, mmu, &registers::Registers16::PC);
+                registers.set16(&registers::Registers16::PC, bytes::combine_little(args[0], args[1]));
+            },
+            Op::Call(_) => panic!("Not Implemented"),
+            Op::Push(r) => push_stack(registers, mmu, r),
+            Op::Pop(r) => pop_stack(registers, mmu, r),
+            Op::Ret(RetArgs::Null) => {
+                let sp = registers.get16(&registers::Registers16::SP);
+                let v = mmu.get16(sp);
+                registers.set16(&registers::Registers16::PC, v);
+                registers.set16(&registers::Registers16::SP, sp+2);
+            },
+            Op::Ret(RetArgs::CheckFlag(_)) => panic!("Not Implemented"),
 
-            Op::JP(_) => { },
+
+            // ALU Codes
+            Op::Inc8(Destination8::R(r)) => {
+                let v = registers.get8(r);
+                let n = v.wrapping_add(1);
+
+                mmu.set_flag(device::flags::Flag::N, false);
+                mmu.set_flag(device::flags::Flag::Z, n == 0);
+                mmu.set_flag(device::flags::Flag::H, v & 0x0F == 0x0F);
+
+                registers.set8(r, n);
+            },
+            Op::Inc8(Destination8::Mem(r)) => {
+                let a = registers.get16(r);
+                let v = mmu.get(a);
+                let n = v.wrapping_add(1);
+
+                mmu.set_flag(device::flags::Flag::N, false);
+                mmu.set_flag(device::flags::Flag::Z, n == 0);
+                mmu.set_flag(device::flags::Flag::H, v & 0x0F == 0x0F);
+
+                mmu.set(a, n);
+            },
+            Op::Inc16(Destination16::R(r)) => {
+                let v = registers.get16(r);
+                let n = v.wrapping_add(1);
+
+                mmu.set_flag(device::flags::Flag::N, false);
+                mmu.set_flag(device::flags::Flag::Z, n == 0);
+                mmu.set_flag(device::flags::Flag::H, v & 0x00FF == 0x00FF);
+
+                registers.set16(r, v + 1);
+            },
+
+            Op::Dec8(Destination8::R(r)) => {
+                let v = registers.get8(r);
+                let n = v.wrapping_sub(1);
+
+                mmu.set_flag(device::flags::Flag::N, true);
+                mmu.set_flag(device::flags::Flag::Z, n == 0);
+                mmu.set_flag(device::flags::Flag::H, v & 0x0F == 0x0F);
+
+                registers.set8(r, n);
+            },
+            Op::Dec8(Destination8::Mem(r)) => {
+                let a = registers.get16(r);
+                let v = mmu.get(a);
+                let n = v.wrapping_sub(1);
+
+                mmu.set_flag(device::flags::Flag::N, true);
+                mmu.set_flag(device::flags::Flag::Z, n == 0);
+                mmu.set_flag(device::flags::Flag::H, v & 0x0F == 0x0F);
+
+                mmu.set(a, n);
+            },
+            Op::Dec16(Destination16::R(r)) => {
+                let v = registers.get16(r);
+                let n = v.wrapping_sub(1);
+
+                mmu.set_flag(device::flags::Flag::N, false);
+                mmu.set_flag(device::flags::Flag::Z, n == 0);
+                mmu.set_flag(device::flags::Flag::H, v & 0x00FF == 0x00FF);
+
+                registers.set16(r, v + 1);
+            }
+            Op::Compare(Source8::N) => {
+                let a = registers.get8(&registers::Registers8::A);
+                let v = args[0];
+
+                mmu.set_flag(device::flags::Flag::N, true);
+                mmu.set_flag(device::flags::Flag::Z, a == v);
+                mmu.set_flag(device::flags::Flag::H, (0x0F & v) > (0x0F & a));
+                mmu.set_flag(device::flags::Flag::C, v > a);
+            },
+            Op::Compare(Source8::R(_)) => panic!("Not Implemented"),
+            Op::Compare(Source8::Mem(_)) => panic!("Not Implemented"),
+            Op::XOR(Destination8::R(r)) => {
+                let v = registers.get8(r);
+                let a = registers.get8(&registers::Registers8::A);
+                let n = a ^ v;
+
+                mmu.set_flag(device::flags::Flag::N, n == 0);
+                mmu.set_flag(device::flags::Flag::Z, false);
+                mmu.set_flag(device::flags::Flag::H, false);
+                mmu.set_flag(device::flags::Flag::C, false);
+
+                registers.set8(&registers::Registers8::A, n)
+            },
+            Op::XOR(Destination8::Mem(_)) => panic!("Not Implemented"),
+
+
+            // End ALU Codes
+
+
+
+            // Cb instructions
+            Op::BIT(location, Destination8::R(r)) => {
+                let v = registers.get8(r);
+                println!("Bit: {}, {:b}", v, v);
+                if bytes::check_bit(v, *location) {
+                    mmu.interupt_enable_flag.clear_flag(device::flags::Flag::Z);
+                    println!("Clearing flag: {}", mmu.interupt_enable_flag.get_flag(device::flags::Flag::Z));
+                } else {
+                    mmu.interupt_enable_flag.set_flag(device::flags::Flag::Z);
+                    println!("Setting flag: {}", mmu.interupt_enable_flag.get_flag(device::flags::Flag::Z));
+                }
+            },
+            Op::BIT(_, Destination8::Mem(_)) => {},
+            Op::RL(Destination8::R(r)) => {
+                let v = registers.get8(r);
+                let c = mmu.get_flag(device::flags::Flag::C);
+
+                let out = if c {
+                    (v << 1) | 0x0001
+                } else {
+                    v << 1
+                };
+
+                mmu.set_flag(device::flags::Flag::C, bytes::check_bit(v, 7));
+
+                registers.set8(r, out);
+            }
+            Op::RL(Destination8::Mem(_)) => {
+                panic!("Not Implemented");
+            }
         }
     }
 }
@@ -248,24 +400,39 @@ impl Instructions {
 }
 
 pub fn new() -> Instructions {
-    let mut instructions = vec![Op::NOP;256];
+    let mut instructions = vec![Op::NotImplemented;256];
 
+    instructions[0x0000] = Op::NOP;
+    instructions[0x0005] = Op::Dec8(Destination8::R(registers::Registers8::B));
+    instructions[0x0006] = Op::Load8(Destination8::R(registers::Registers8::B), Source8::N);
     instructions[0x000C] = Op::Inc8(Destination8::R(registers::Registers8::C));
     instructions[0x000E] = Op::Load8(Destination8::R(registers::Registers8::C), Source8::N);
     instructions[0x0011] = Op::Load16(Destination16::R(registers::Registers16::DE), Source16::N);
+    instructions[0x0013] = Op::Inc16(Destination16::R(registers::Registers16::DE));
+    instructions[0x0017] = Op::RL(Destination8::R(registers::Registers8::A));
     instructions[0x003E] = Op::Load8(Destination8::R(registers::Registers8::A), Source8::N);
     instructions[0x001A] = Op::Load8(Destination8::R(registers::Registers8::A), Source8::Mem(registers::Registers16::DE));
+    instructions[0x0021] = Op::Load16(Destination16::R(registers::Registers16::HL), Source16::N);
+    instructions[0x0022] = Op::LoadAndInc;
+    instructions[0x0023] = Op::Inc8(Destination8::Mem(registers::Registers16::HL));
+    instructions[0x004F] = Op::Load8(Destination8::R(registers::Registers8::C), Source8::R(registers::Registers8::A));
     instructions[0x0031] = Op::Load16(Destination16::R(registers::Registers16::SP), Source16::N);
     instructions[0x0032] = Op::LoadAndDec;
-    instructions[0x0020] = Op::JR(JrArgs::NZ);
-    instructions[0x0021] = Op::Load16(Destination16::R(registers::Registers16::HL), Source16::N);
+    instructions[0x0020] = Op::JR(JrArgs::CheckFlag(CheckFlag::NZ));
     instructions[0x00AF] = Op::XOR(Destination8::R(registers::Registers8::A));
+    instructions[0x00C5] = Op::Push(registers::Registers16::BC);
+    instructions[0x00C1] = Op::Pop(registers::Registers16::BC);
+    instructions[0x00CD] = Op::Call(CallArgs::N);
+    instructions[0x00C9] = Op::Ret(RetArgs::Null);
     instructions[0x00E2] = Op::LoadFF00(LoadFF00Targets::C, LoadFF00Targets::A);
     instructions[0x00E0] = Op::LoadFF00(LoadFF00Targets::N, LoadFF00Targets::A);
+    instructions[0x00FE] = Op::Compare(Source8::N);
     instructions[0x0077] = Op::Load8(Destination8::Mem(registers::Registers16::HL), Source8::R(registers::Registers8::A));
+    instructions[0x007B] = Op::Load8(Destination8::R(registers::Registers8::A), Source8::R(registers::Registers8::E));
 
-    let mut cb_instructions = vec![Op::NOP;256];
+    let mut cb_instructions = vec![Op::NotImplemented;256];
     cb_instructions[0x007C] = Op::BIT(7, Destination8::R(registers::Registers8::H));
+    cb_instructions[0x0011] = Op::RL(Destination8::R(registers::Registers8::C));
 
     Instructions {
         instructions: instructions,

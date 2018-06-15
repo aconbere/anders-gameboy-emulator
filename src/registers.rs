@@ -74,8 +74,8 @@ impl Registers {
     pub fn inc_pc(&mut self) { self.pc = self.pc + 1 }
 
     pub fn dec_hl(&mut self) {
-        let hl = self.get16(&Registers16::HL) - 1;
-        self.set16(&Registers16::HL, hl)
+        let hl = self.get16(&Registers16::HL);
+        self.set16(&Registers16::HL, hl - 1)
     }
 
     pub fn inc_hl(&mut self) {
@@ -85,8 +85,8 @@ impl Registers {
 
     fn set_combined(&mut self, r1:&Registers8, r2:&Registers8, v:u16) {
         let (high, low) = bytes::split_u16(v);
-        self.set8(r1, high);
-        self.set8(r2, low);
+        self.set8(r1, low);
+        self.set8(r2, high);
     }
 }
 
