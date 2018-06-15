@@ -284,7 +284,9 @@ impl Op {
                 mmu.set_flag(device::flags::Flag::Z, n == 0);
                 mmu.set_flag(device::flags::Flag::H, v & 0x00FF == 0x00FF);
 
-                registers.set16(r, v + 1);
+                println!("Inc16: Incrementing {:?} to {:X}", r, n);
+
+                registers.set16(r, n);
             },
 
             Op::Dec8(Destination8::R(r)) => {
@@ -321,6 +323,8 @@ impl Op {
             Op::Compare(Source8::N) => {
                 let a = registers.get8(&registers::Registers8::A);
                 let v = args[0];
+
+                println!("\tCompare: A {:X} to V {:X}", a, v);
 
                 mmu.set_flag(device::flags::Flag::N, true);
                 mmu.set_flag(device::flags::Flag::Z, a == v);

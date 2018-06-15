@@ -13,6 +13,3 @@ impl Device for HardwareIO {
         self.storage[a as usize] = v;
     }
 }
-
-
-
