@@ -6,19 +6,27 @@ pub struct CPU <'a> {
     registers: &'a mut registers::Registers,
     instructions: &'a instructions::Instructions,
     mmu: &'a mut mmu::MMU,
+    cycles: u32,
 }
 
 impl <'a> CPU <'a> {
     pub fn run(&mut self) {
-        let mut i = 0;
-
         loop {
-            i = i + 1;
-            self.next(i)
+            self.next_frame()
         }
     }
-    pub fn next(&mut self, i:u16) {
-        println!("TICK {}", i);
+
+    pub fn next_frame(&mut self) {
+        println!("FRAME");
+        while self.cycles <= 70244 {
+            self.cycles += self.next() as u32
+        }
+
+        self.cycles -= 70244
+    }
+
+    pub fn next(&mut self) -> u8 {
+        println!("TICK");
 
         let pc = self.registers.get16(&registers::Registers16::PC);
         println!("\tpc: {}", pc);
@@ -48,7 +56,7 @@ impl <'a> CPU <'a> {
 
         println!("\tcalling instruction: {:?} with args: {:X?}", instruction, args);
 
-        instruction.call(&mut self.registers, &mut self.mmu, args);
+        instruction.call(&mut self.registers, &mut self.mmu, args)
     }
 }
 
@@ -61,5 +69,6 @@ pub fn new<'a>(
         registers:registers,
         instructions:instructions,
         mmu:mmu,
+        cycles:0,
     }
 }

@@ -17,6 +17,7 @@ pub enum Source8 {
 #[derive(Debug, Clone, Copy)]
 pub enum Source16 {
     R(registers::Registers16),
+    R8(registers::Registers16),
     N,
 }
 
@@ -29,6 +30,7 @@ pub enum Destination8 {
 #[derive(Debug, Clone, Copy)]
 pub enum Destination16 {
     R(registers::Registers16),
+    Mem(registers::Registers16),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -77,8 +79,10 @@ pub enum Op {
     NOP,
     Load8(Destination8, Source8),
     Load16(Destination16, Source16),
+
     Inc8(Destination8),
     Inc16(Destination16),
+
     Dec8(Destination8),
     Dec16(Destination16),
     LoadAndInc,
@@ -169,87 +173,117 @@ impl Op {
         }
     }
 
-    pub fn call(&self, registers:&mut registers::Registers, mmu:&mut mmu::MMU, args:Vec<u8>) {
+    pub fn call(&self, registers:&mut registers::Registers, mmu:&mut mmu::MMU, args:Vec<u8>) -> u8 {
         match self {
             Op::NotImplemented => panic!("NotImplemented Instruction"),
-            Op::NOP => {},
+            Op::NOP => 4,
             Op::Load8(Destination8::R(r1), Source8::R(r2)) => {
                 let v = registers.get8(r2);
                 registers.set8(r1, v);
+                4
             },
             Op::Load8(Destination8::R(r1), Source8::N) => {
                 registers.set8(r1, args[0]);
+                4
             },
             Op::Load8(Destination8::R(r1), Source8::Mem(r2)) => {
                 let v = mmu.get(registers.get16(r2));
                 registers.set8(r1, v);
+                8
             },
             Op::Load8(Destination8::Mem(r1),Source8::R(r2)) => {
                 load_to_memory(registers, mmu, r1, r2);
+                8
             },
-            Op::Load8(_, _) => panic!("invalid args to load8"),
+            Op::Load8(_,_) => panic!("Not Implemented"),
+
             Op::Load16(Destination16::R(r1), Source16::R(r2)) => {
                 let v = registers.get16(r2);
                 registers.set16(r1, v);
+                12
             },
             Op::Load16(Destination16::R(r1), Source16::N) => {
                 registers.set16(r1, bytes::combine_little(args[0], args[1]));
+                12
             },
+            Op::Load16(Destination16::Mem(_), _) => {
+                panic!("Not Implemented");
+                //20
+            },
+            Op::Load16(_, _) => panic!("Not Implemented"),
+
             Op::LoadFF00(LoadFF00Targets::C, LoadFF00Targets::A)=> {
                 let c = registers.get8(&registers::Registers8::C) as u16;
                 let a = registers.get8(&registers::Registers8::A);
                 mmu.set(c + 0xFF00, a);
+                8
             },
             Op::LoadFF00(LoadFF00Targets::A, LoadFF00Targets::C)=> {
                 let c = registers.get8(&registers::Registers8::C) as u16;
                 let v = mmu.get(c + 0xFF00);
                 registers.set8(&registers::Registers8::A, v);
+                8
             },
             Op::LoadFF00(LoadFF00Targets::A, LoadFF00Targets::N)=> {
                 let ma = args[0] as u16;
                 let v = mmu.get(ma + 0xFF00);
                 registers.set8(&registers::Registers8::A, v);
+                8
             },
             Op::LoadFF00(LoadFF00Targets::N, LoadFF00Targets::A)=> {
                 let a = registers.get8(&registers::Registers8::A);
                 let ma = args[0] as u16;
                 mmu.set(ma + 0xFF00, a);
+                8
             },
             Op::LoadFF00(_, _)=> panic!("invalid loadFF00 inputs"),
 
             Op::LoadAndDec => {
                 load_to_memory(registers, mmu, &registers::Registers16::HL, &registers::Registers8::A);
                 registers.dec_hl();
+                8
             },
             Op::LoadAndInc => {
                 load_to_memory(registers, mmu, &registers::Registers16::HL, &registers::Registers8::A);
                 registers.inc_hl();
+                8
             },
 
             Op::JR(JrArgs::CheckFlag(CheckFlag::NZ)) => {
-                if !mmu.interupt_enable_flag.get_flag(device::flags::Flag::Z) {
+                if mmu.interupt_enable_flag.get_flag(device::flags::Flag::Z) {
+                    println!("JR: flag set!");
+                    12
+                } else {
                     println!("JR: flag unset!");
                     let v = args[0] as i8;
                     let pc = registers.get16(&registers::Registers16::PC);
-                    registers.set16(&registers::Registers16::PC, bytes::add_unsigned_signed(pc, v))
-                } else {
-                    println!("JR: flag set!");
+                    registers.set16(&registers::Registers16::PC, bytes::add_unsigned_signed(pc, v));
+                    16
                 }
             },
+
             Op::JR(_) => panic!("Not Implemented"),
             Op::JP(_) => panic!("Not Implemented"),
             Op::Call(CallArgs::N) => {
                 push_stack(registers, mmu, &registers::Registers16::PC);
                 registers.set16(&registers::Registers16::PC, bytes::combine_little(args[0], args[1]));
+                24
             },
             Op::Call(_) => panic!("Not Implemented"),
-            Op::Push(r) => push_stack(registers, mmu, r),
-            Op::Pop(r) => pop_stack(registers, mmu, r),
+            Op::Push(r) => {
+                push_stack(registers, mmu, r);
+                16
+            },
+            Op::Pop(r) => {
+                pop_stack(registers, mmu, r);
+                12
+            },
             Op::Ret(RetArgs::Null) => {
                 let sp = registers.get16(&registers::Registers16::SP);
                 let v = mmu.get16(sp);
                 registers.set16(&registers::Registers16::PC, v);
                 registers.set16(&registers::Registers16::SP, sp+2);
+                16
             },
             Op::Ret(RetArgs::CheckFlag(_)) => panic!("Not Implemented"),
 
@@ -264,6 +298,7 @@ impl Op {
                 mmu.set_flag(device::flags::Flag::H, v & 0x0F == 0x0F);
 
                 registers.set8(r, n);
+                4
             },
             Op::Inc8(Destination8::Mem(r)) => {
                 let a = registers.get16(r);
@@ -275,6 +310,7 @@ impl Op {
                 mmu.set_flag(device::flags::Flag::H, v & 0x0F == 0x0F);
 
                 mmu.set(a, n);
+                12
             },
             Op::Inc16(Destination16::R(r)) => {
                 let v = registers.get16(r);
@@ -287,7 +323,9 @@ impl Op {
                 println!("Inc16: Incrementing {:?} to {:X}", r, n);
 
                 registers.set16(r, n);
+                8
             },
+            Op::Inc16(Destination16::Mem(r)) => panic!("Not Implemented"),
 
             Op::Dec8(Destination8::R(r)) => {
                 let v = registers.get8(r);
@@ -298,6 +336,7 @@ impl Op {
                 mmu.set_flag(device::flags::Flag::H, v & 0x0F == 0x0F);
 
                 registers.set8(r, n);
+                4
             },
             Op::Dec8(Destination8::Mem(r)) => {
                 let a = registers.get16(r);
@@ -309,6 +348,7 @@ impl Op {
                 mmu.set_flag(device::flags::Flag::H, v & 0x0F == 0x0F);
 
                 mmu.set(a, n);
+                12
             },
             Op::Dec16(Destination16::R(r)) => {
                 let v = registers.get16(r);
@@ -319,7 +359,10 @@ impl Op {
                 mmu.set_flag(device::flags::Flag::H, v & 0x00FF == 0x00FF);
 
                 registers.set16(r, v + 1);
-            }
+                8
+            },
+            Op::Dec16(_) => panic!("Not Implemented"),
+
             Op::Compare(Source8::N) => {
                 let a = registers.get8(&registers::Registers8::A);
                 let v = args[0];
@@ -330,6 +373,7 @@ impl Op {
                 mmu.set_flag(device::flags::Flag::Z, a == v);
                 mmu.set_flag(device::flags::Flag::H, (0x0F & v) > (0x0F & a));
                 mmu.set_flag(device::flags::Flag::C, v > a);
+                8
             },
             Op::Compare(Source8::R(_)) => panic!("Not Implemented"),
             Op::Compare(Source8::Mem(_)) => panic!("Not Implemented"),
@@ -343,7 +387,8 @@ impl Op {
                 mmu.set_flag(device::flags::Flag::H, false);
                 mmu.set_flag(device::flags::Flag::C, false);
 
-                registers.set8(&registers::Registers8::A, n)
+                registers.set8(&registers::Registers8::A, n);
+                4
             },
             Op::XOR(Destination8::Mem(_)) => panic!("Not Implemented"),
 
@@ -363,8 +408,9 @@ impl Op {
                     mmu.interupt_enable_flag.set_flag(device::flags::Flag::Z);
                     println!("Setting flag: {}", mmu.interupt_enable_flag.get_flag(device::flags::Flag::Z));
                 }
+                8
             },
-            Op::BIT(_, Destination8::Mem(_)) => {},
+            Op::BIT(_, Destination8::Mem(_)) => panic!("Not Implemented"),
             Op::RL(Destination8::R(r)) => {
                 let v = registers.get8(r);
                 let c = mmu.get_flag(device::flags::Flag::C);
@@ -378,10 +424,9 @@ impl Op {
                 mmu.set_flag(device::flags::Flag::C, bytes::check_bit(v, 7));
 
                 registers.set8(r, out);
+                8
             }
-            Op::RL(Destination8::Mem(_)) => {
-                panic!("Not Implemented");
-            }
+            Op::RL(Destination8::Mem(_)) => panic!("Not Implemented"),
         }
     }
 }
