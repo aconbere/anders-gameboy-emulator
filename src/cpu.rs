@@ -10,7 +10,10 @@ pub struct CPU <'a> {
 
 impl <'a> CPU <'a> {
     pub fn run(&mut self) {
-        for i in 0..100000 {
+        let mut i = 0;
+
+        loop {
+            i = i + 1;
             self.next(i)
         }
     }
