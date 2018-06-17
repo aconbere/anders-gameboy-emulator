@@ -98,6 +98,8 @@ pub enum Op {
     Push(registers::Registers16),
     Ret(RetArgs),
     Compare(Source8),
+    Halt,
+    PrefixCB,
 
     // CB extras
     BIT(u8, Destination8),
@@ -144,6 +146,8 @@ impl Op {
         match self {
             Op::NotImplemented => 0,
             Op::NOP => 0,
+            Op::Halt => 0,
+            Op::PrefixCB => 0,
             Op::Load8(_, Source8::N) => 1,
             Op::Load8(_, _) => 0,
             Op::Load16(_, Source16::N) => 2,
@@ -177,6 +181,8 @@ impl Op {
         match self {
             Op::NotImplemented => panic!("NotImplemented Instruction"),
             Op::NOP => 4,
+            Op::Halt => 4,
+            Op::PrefixCB => 4,
             Op::Load8(Destination8::R(r1), Source8::R(r2)) => {
                 let v = registers.get8(r2);
                 registers.set8(r1, v);
@@ -471,11 +477,13 @@ pub fn new() -> Instructions {
     instructions[0x00AF] = Op::XOR(Destination8::R(registers::Registers8::A));
     instructions[0x00C5] = Op::Push(registers::Registers16::BC);
     instructions[0x00C1] = Op::Pop(registers::Registers16::BC);
+    instructions[0x00CB] = Op::PrefixCB;
     instructions[0x00CD] = Op::Call(CallArgs::N);
     instructions[0x00C9] = Op::Ret(RetArgs::Null);
     instructions[0x00E2] = Op::LoadFF00(LoadFF00Targets::C, LoadFF00Targets::A);
     instructions[0x00E0] = Op::LoadFF00(LoadFF00Targets::N, LoadFF00Targets::A);
     instructions[0x00FE] = Op::Compare(Source8::N);
+    instructions[0x0076] = Op::Halt;
     instructions[0x0077] = Op::Load8(Destination8::Mem(registers::Registers16::HL), Source8::R(registers::Registers8::A));
     instructions[0x007B] = Op::Load8(Destination8::R(registers::Registers8::A), Source8::R(registers::Registers8::E));
 
