@@ -27,23 +27,23 @@ impl <'a> CPU <'a> {
     pub fn next_frame(&mut self) {
         println!("FRAME");
         while self.cycles <= 70244 {
-            match self.state {
-                State::Running => {
-                    self.cycles += self.next(false) as u32
-                },
-                State::Prefix => {
-                    self.cycles += self.next(true) as u32;
-                    self.state = State::Running
-                },
-                State::Halted => {
-
-                }
-            }
+            self.cycles += self.tick() as u32;
         }
         self.cycles -= 70244
     }
 
-    pub fn next(&mut self, prefix:bool) -> u8 {
+    pub fn tick(&mut self) -> u8 {
+        match self.state {
+            State::Running => self.sub_tick(false),
+            State::Prefix => {
+                self.state = State::Running;
+                self.sub_tick(true)
+            },
+            State::Halted => 0,
+        }
+    }
+
+    pub fn sub_tick(&mut self, prefix:bool) -> u8 {
         println!("TICK: Prefix: {}", prefix);
 
         let pc = self.registers.get16(&registers::Registers16::PC);

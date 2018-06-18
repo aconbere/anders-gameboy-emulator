@@ -14,7 +14,12 @@ fn main() {
     let cartridge = device::cartridge::load_from_file(String::from("/Users/anders/Projects/gb_test_roms/sheepitup.gb"));
     let mut mmu = mmu::new(cartridge);
     let mut cpu = cpu::new(&mut registers, &instructions, &mut mmu);
-    cpu.run();
+    let mut gpu = device::gpu::new();
+
+    loop {
+        let cycles = cpu.tick();
+        gpu.tick(cycles);
+    }
 
     // let display = display::start(cpu);
     // cpu.dump_map();
