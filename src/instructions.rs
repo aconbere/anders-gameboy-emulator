@@ -256,7 +256,7 @@ impl Op {
             },
 
             Op::JR(JrArgs::CheckFlag(CheckFlag::NZ)) => {
-                if mmu.interupt_enable_flag.get_flag(device::flags::Flag::Z) {
+                if mmu.get_flag(device::flags::Flag::Z) {
                     println!("JR: flag set!");
                     12
                 } else {
@@ -331,7 +331,7 @@ impl Op {
                 registers.set16(r, n);
                 8
             },
-            Op::Inc16(Destination16::Mem(r)) => panic!("Not Implemented"),
+            Op::Inc16(Destination16::Mem(_)) => panic!("Not Implemented"),
 
             Op::Dec8(Destination8::R(r)) => {
                 let v = registers.get8(r);
@@ -408,11 +408,11 @@ impl Op {
                 let v = registers.get8(r);
                 println!("Bit: {}, {:b}", v, v);
                 if bytes::check_bit(v, *location) {
-                    mmu.interupt_enable_flag.clear_flag(device::flags::Flag::Z);
-                    println!("Clearing flag: {}", mmu.interupt_enable_flag.get_flag(device::flags::Flag::Z));
+                    mmu.set_flag(device::flags::Flag::Z, false);
+                    println!("Clearing flag: {}", mmu.get_flag(device::flags::Flag::Z));
                 } else {
-                    mmu.interupt_enable_flag.set_flag(device::flags::Flag::Z);
-                    println!("Setting flag: {}", mmu.interupt_enable_flag.get_flag(device::flags::Flag::Z));
+                    mmu.set_flag(device::flags::Flag::Z, true);
+                    println!("Setting flag: {}", mmu.get_flag(device::flags::Flag::Z));
                 }
                 8
             },

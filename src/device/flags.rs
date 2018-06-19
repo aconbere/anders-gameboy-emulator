@@ -48,3 +48,7 @@ impl Flags {
     }
 
 }
+
+pub fn new () -> Flags {
+    Flags{f: 0x0000}
+}

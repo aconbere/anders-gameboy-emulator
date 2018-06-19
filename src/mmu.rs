@@ -6,47 +6,22 @@ use device;
 use bytes;
 use device::Device;
 
-pub static GBM_BOOT_ROM: [u8;256] = [
-    0x31, 0xFE, 0xFF, 0xAF, 0x21, 0xFF, 0x9F, 0x32, 0xCB, 0x7C, 0x20, 0xFB, 0x21, 0x26, 0xFF, 0x0E,
-    0x11, 0x3E, 0x80, 0x32, 0xE2, 0x0C, 0x3E, 0xF3, 0xE2, 0x32, 0x3E, 0x77, 0x77, 0x3E, 0xFC, 0xE0,
-    0x47, 0x11, 0x04, 0x01, 0x21, 0x10, 0x80, 0x1A, 0xCD, 0x95, 0x00, 0xCD, 0x96, 0x00, 0x13, 0x7B,
-    0xFE, 0x34, 0x20, 0xF3, 0x11, 0xD8, 0x00, 0x06, 0x08, 0x1A, 0x13, 0x22, 0x23, 0x05, 0x20, 0xF9,
-    0x3E, 0x19, 0xEA, 0x10, 0x99, 0x21, 0x2F, 0x99, 0x0E, 0x0C, 0x3D, 0x28, 0x08, 0x32, 0x0D, 0x20,
-    0xF9, 0x2E, 0x0F, 0x18, 0xF3, 0x67, 0x3E, 0x64, 0x57, 0xE0, 0x42, 0x3E, 0x91, 0xE0, 0x40, 0x04,
-    0x1E, 0x02, 0x0E, 0x0C, 0xF0, 0x44, 0xFE, 0x90, 0x20, 0xFA, 0x0D, 0x20, 0xF7, 0x1D, 0x20, 0xF2,
-    0x0E, 0x13, 0x24, 0x7C, 0x1E, 0x83, 0xFE, 0x62, 0x28, 0x06, 0x1E, 0xC1, 0xFE, 0x64, 0x20, 0x06,
-    0x7B, 0xE2, 0x0C, 0x3E, 0x87, 0xE2, 0xF0, 0x42, 0x90, 0xE0, 0x42, 0x15, 0x20, 0xD2, 0x05, 0x20,
-    0x4F, 0x16, 0x20, 0x18, 0xCB, 0x4F, 0x06, 0x04, 0xC5, 0xCB, 0x11, 0x17, 0xC1, 0xCB, 0x11, 0x17,
-    0x05, 0x20, 0xF5, 0x22, 0x23, 0x22, 0x23, 0xC9, 0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B,
-    0x03, 0x73, 0x00, 0x83, 0x00, 0x0C, 0x00, 0x0D, 0x00, 0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E,
-    0xDC, 0xCC, 0x6E, 0xE6, 0xDD, 0xDD, 0xD9, 0x99, 0xBB, 0xBB, 0x67, 0x63, 0x6E, 0x0E, 0xEC, 0xCC,
-    0xDD, 0xDC, 0x99, 0x9F, 0xBB, 0xB9, 0x33, 0x3E, 0x3C, 0x42, 0xB9, 0xA5, 0xB9, 0xA5, 0x42, 0x3C,
-    0x21, 0x04, 0x01, 0x11, 0xA8, 0x00, 0x1A, 0x13, 0xBE, 0x00, 0x00, 0x23, 0x7D, 0xFE, 0x34, 0x20,
-    0xF5, 0x06, 0x19, 0x78, 0x86, 0x23, 0x05, 0x20, 0xFB, 0x86, 0x00, 0x00, 0x3E, 0x01, 0xE0, 0x50
-];
-
-pub struct MMU {
-    restart_and_interupt: device::restart_and_interrupt::RestartAndInterrupt,
-
-    // cartridge
-    cartridge: device::cartridge::Cartridge,
-    // cartridge_header: device::not_implemented::NotImplemented,
-    // cartridge_rom_bank_0: device::not_implemented::NotImplemented,
-    // cartridge_rom_bank_1: device::not_implemented::NotImplemented,
-
-    video_ram: device::vram::VRam,
-    cartridge_ram: device::not_implemented::NotImplemented,
-    internal_ram_bank_0: device::not_implemented::NotImplemented,
-    internal_ram_bank_1: device::not_implemented::NotImplemented,
-    echo_ram: device::not_implemented::NotImplemented,
-    object_attribute_memory: device::not_implemented::NotImplemented,
-    unusable_memory: device::not_implemented::NotImplemented,
-    hardware_io_registers: device::hardware_io::HardwareIO,
-    zero_page: device::zero_page::ZeroPage,
-    pub interupt_enable_flag: device::flags::Flags,
+pub struct MMU<'a> {
+    pub restart_and_interupt: &'a mut device::restart_and_interrupt::RestartAndInterrupt,
+    pub cartridge: &'a mut device::cartridge::Cartridge,
+    pub video_ram: &'a mut device::vram::VRam,
+    pub cartridge_ram: &'a mut device::not_implemented::NotImplemented,
+    pub internal_ram_bank_0: &'a mut device::not_implemented::NotImplemented,
+    pub internal_ram_bank_1: &'a mut device::not_implemented::NotImplemented,
+    pub echo_ram: &'a mut device::not_implemented::NotImplemented,
+    pub object_attribute_memory: &'a mut device::not_implemented::NotImplemented,
+    pub unusable_memory: &'a mut device::not_implemented::NotImplemented,
+    pub hardware_io: &'a mut device::hardware_io::HardwareIO,
+    pub zero_page: &'a mut device::zero_page::ZeroPage,
+    pub interupt_enable_flag: &'a mut device::flags::Flags,
 }
 
-impl <'a> MMU {
+impl <'a> MMU <'a> {
     pub fn set_flag(&mut self, f:device::flags::Flag, v:bool) {
         if v {
             self.interupt_enable_flag.set_flag(f);
@@ -84,7 +59,7 @@ impl <'a> MMU {
             device::Kind::EchoRAM => self.echo_ram.get(address),
             device::Kind::ObjectAttributeMemory => self.object_attribute_memory.get(address),
             device::Kind::UnusableMemory => self.unusable_memory.get(address),
-            device::Kind::HardwareIORegisters => self.hardware_io_registers.get(address - 0xFF00),
+            device::Kind::HardwareIORegisters => self.hardware_io.get(address - 0xFF00),
             device::Kind::ZeroPage => self.zero_page.get(address - 0xFF80),
             device::Kind::InterruptEnableFlag => self.interupt_enable_flag.get(address),
         }
@@ -107,28 +82,34 @@ impl <'a> MMU {
             device::Kind::EchoRAM => self.echo_ram.set(address, v),
             device::Kind::ObjectAttributeMemory => self.object_attribute_memory.set(address, v),
             device::Kind::UnusableMemory => self.unusable_memory.set(address, v),
-            device::Kind::HardwareIORegisters => self.hardware_io_registers.set(address - 0xFF00, v),
+            device::Kind::HardwareIORegisters => self.hardware_io.set(address - 0xFF00, v),
             device::Kind::ZeroPage => self.zero_page.set(address - 0xFF80, v),
             device::Kind::InterruptEnableFlag => self.interupt_enable_flag.set(address, v),
         }
     }
 }
 
-pub fn new(cartridge:device::cartridge::Cartridge) -> MMU {
-
-    MMU {
-        restart_and_interupt: device::restart_and_interrupt::RestartAndInterrupt{ storage: GBM_BOOT_ROM },
-        cartridge: cartridge,
-        video_ram: device::vram::VRam{storage: [0;8192]},
-        cartridge_ram: device::not_implemented::NotImplemented{},
-        internal_ram_bank_0: device::not_implemented::NotImplemented{},
-        internal_ram_bank_1: device::not_implemented::NotImplemented{},
-        echo_ram: device::not_implemented::NotImplemented{},
-        object_attribute_memory: device::not_implemented::NotImplemented{},
-        unusable_memory: device::not_implemented::NotImplemented{},
-        hardware_io_registers: device::hardware_io::HardwareIO{storage: [0;128]},
-        zero_page: device::zero_page::ZeroPage{storage: [0;127]},
-        interupt_enable_flag: device::flags::Flags{f:0x0000},
-    }
-}
-
+// pub fn new <'a> (
+//     restart_and_interupt: &'a device::restart_and_interrupt::RestartAndInterrupt,
+//     cartridge: &'a mut device::cartridge::Cartridge,
+//     video_ram: &'a mut device::vram::VRam,
+//     hardware_io: &'a device::hardware_io::HardwareIO,
+//     flags: &'a mut device::flags::Flags,
+// ) -> MMU <'a> {
+// 
+//     MMU {
+//         restart_and_interupt: &mut restart_and_interupt,
+//         cartridge: &mut cartridge,
+//         video_ram: &mut video_ram,
+//         cartridge_ram: &device::not_implemented::NotImplemented{},
+//         internal_ram_bank_0: &device::not_implemented::NotImplemented{},
+//         internal_ram_bank_1: &device::not_implemented::NotImplemented{},
+//         echo_ram: &device::not_implemented::NotImplemented{},
+//         object_attribute_memory: &device::not_implemented::NotImplemented{},
+//         unusable_memory: &device::not_implemented::NotImplemented{},
+//         hardware_io: &hardware_io,
+//         zero_page: &device::zero_page::ZeroPage{storage: [0;127]},
+//         interupt_enable_flag: &mut flags,
+//     }
+// }
+// 

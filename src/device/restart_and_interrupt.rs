@@ -14,3 +14,6 @@ impl Device for RestartAndInterrupt {
     }
 }
 
+pub fn new(storage: [u8; 256]) -> RestartAndInterrupt {
+    RestartAndInterrupt { storage: storage }
+}

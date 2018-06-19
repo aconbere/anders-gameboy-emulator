@@ -13,3 +13,7 @@ impl Device for VRam {
         self.storage[a as usize] = v;
     }
 }
+
+pub fn new() -> VRam {
+    VRam{storage: [0;8192]}
+}

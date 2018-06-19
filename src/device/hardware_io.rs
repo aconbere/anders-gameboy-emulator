@@ -4,6 +4,12 @@ pub struct HardwareIO {
     pub storage: [u8; 128]
 }
 
+pub fn new() -> HardwareIO {
+    HardwareIO {
+        storage: [0;128],
+    }
+}
+
 impl Device for HardwareIO {
     fn get(&self, a:u16) -> u8 {
         self.storage[a as usize]
