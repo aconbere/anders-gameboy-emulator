@@ -267,7 +267,7 @@ impl Op {
                     let v = args[0] as i8;
                     let pc = registers.get16(&registers::Registers16::PC);
                     let out = bytes::add_unsigned_signed(pc, v);
-                    println!("JR: PC=({}{})={}", pc, v, out); 
+                    println!("JR: PC=({}{})={}", pc, v, out);
                     registers.set16(&registers::Registers16::PC, out);
                     16
                 }
@@ -336,9 +336,14 @@ impl Op {
                 mmu.set_flag(device::flags::Flag::Z, n == 0);
                 mmu.set_flag(device::flags::Flag::H, v & 0x00FF == 0x00FF);
 
-                println!("Inc16: Incrementing {:?} to {:X}", r, n);
-
                 registers.set16(r, n);
+                println!("Inc16: Incrementing {:?} to {:X} - {:X}", r, n, registers.get16(r));
+                println!(
+                    "Inc16: Incrementing {:?} to D:{:X} - E:{:X}",
+                    r,
+                    registers.get8(&registers::Registers8::D),
+                    registers.get8(&registers::Registers8::E)
+                );
                 8
             },
             Op::Inc16(Destination16::Mem(_)) => panic!("Not Implemented"),
