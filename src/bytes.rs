@@ -32,9 +32,9 @@ pub fn clear_bit(input: u8, n: u8) -> u8 {
 
 pub fn add_unsigned_signed(unsigned:u16, signed:i8) -> u16 {
     if signed < 0 {
-        unsigned - (-signed) as u16
+        unsigned - (-signed as u16)
     } else {
-        unsigned + (signed) as u16
+        unsigned + (signed as u16)
     }
 }
 
@@ -44,9 +44,12 @@ mod tests {
 
     #[test]
     fn test_check_bit() {
-        println!("First: {:X}, {:b}", 0x99, 0x99);
         assert_eq!(check_bit(0x99, 7), true);
-        println!("Second: {:X}, {:b}", 0x7F, 0x7F);
         assert_eq!(check_bit(0x7F, 7), false);
+    }
+
+    #[test]
+    fn test_add_unsigned_signed() {
+        assert_eq!(add_unsigned_signed(50 as u16, -13 as i8), 37);
     }
 }

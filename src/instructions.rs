@@ -266,7 +266,9 @@ impl Op {
                     println!("JR: flag unset!");
                     let v = args[0] as i8;
                     let pc = registers.get16(&registers::Registers16::PC);
-                    registers.set16(&registers::Registers16::PC, bytes::add_unsigned_signed(pc, v));
+                    let out = bytes::add_unsigned_signed(pc, v);
+                    println!("JR: PC=({}{})={}", pc, v, out); 
+                    registers.set16(&registers::Registers16::PC, out);
                     16
                 }
             },
