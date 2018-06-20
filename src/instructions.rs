@@ -34,6 +34,13 @@ pub enum Destination16 {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub enum Load8Args {
+    R(registers::Registers8),
+    Mem(registers::Registers16),
+    N,
+}
+
+#[derive(Debug, Clone, Copy)]
 pub enum CheckFlag {
     Z,
     NZ,
@@ -77,19 +84,21 @@ pub enum RetArgs {
 pub enum Op {
     NotImplemented,
     NOP,
-    Load8(Destination8, Source8),
+    Load8(Load8Args, Load8Args),
     Load16(Destination16, Source16),
 
     Inc8(Destination8),
     Inc16(Destination16),
-
     Dec8(Destination8),
     Dec16(Destination16),
+    XOR(Destination8),
+    Sub(Destination8),
+
+
     LoadAndInc,
     //LoadAndIncR,
     LoadAndDec,
     //LoadAndDecR,
-    XOR(Destination8),
     JR(JrArgs),
     JP(JpArgs),
     LoadFF00(LoadFF00Targets, LoadFF00Targets),
@@ -148,8 +157,11 @@ impl Op {
             Op::NOP => 0,
             Op::Halt => 0,
             Op::PrefixCB => 0,
-            Op::Load8(_, Source8::N) => 1,
+
+            Op::Load8(_, Load8Args::N) => 1,
+            Op::Load8(Load8Args::N, _) => 2,
             Op::Load8(_, _) => 0,
+
             Op::Load16(_, Source16::N) => 2,
             Op::Load16(_, _) => 0,
             Op::Inc8(_) => 0,
@@ -159,6 +171,7 @@ impl Op {
             Op::LoadAndInc => 0,
             Op::LoadAndDec => 0,
             Op::XOR(_) => 0,
+            Op::Sub(_) => 0,
             Op::JR(_) => 1,
             Op::JP(_) => 2,
             Op::LoadFF00(_, LoadFF00Targets::N) => 1,
@@ -183,23 +196,29 @@ impl Op {
             Op::NOP => 4,
             Op::Halt => 4,
             Op::PrefixCB => 4,
-            Op::Load8(Destination8::R(r1), Source8::R(r2)) => {
+            Op::Load8(Load8Args::R(r1), Load8Args::R(r2)) => {
                 let v = registers.get8(r2);
                 registers.set8(r1, v);
                 println!("Load8({:?}, {:?}) {:?}={:X}", r1, r2, r1, registers.get8(r1));
                 4
             },
-            Op::Load8(Destination8::R(r1), Source8::N) => {
+            Op::Load8(Load8Args::R(r1), Load8Args::N) => {
                 registers.set8(r1, args[0]);
                 4
             },
-            Op::Load8(Destination8::R(r1), Source8::Mem(r2)) => {
+            Op::Load8(Load8Args::R(r1), Load8Args::Mem(r2)) => {
                 let v = mmu.get(registers.get16(r2));
                 registers.set8(r1, v);
                 8
             },
-            Op::Load8(Destination8::Mem(r1),Source8::R(r2)) => {
+            Op::Load8(Load8Args::Mem(r1),Load8Args::R(r2)) => {
                 load_to_memory(registers, mmu, r1, r2);
+                8
+            },
+            Op::Load8(Load8Args::N, Load8Args::R(r)) => {
+                let a = bytes::combine_little(args[0], args[1]);
+                let v = registers.get8(r);
+                mmu.set(a, v);
                 8
             },
             Op::Load8(_,_) => panic!("Not Implemented"),
@@ -258,12 +277,27 @@ impl Op {
                 8
             },
 
-            Op::JR(JrArgs::CheckFlag(CheckFlag::NZ)) => {
-                if mmu.get_flag(device::flags::Flag::Z) {
+            // fn jump_relative(&mut registers:registers::Registers, v:i8) {
+            //     let pc = registers.get16(&registers::Registers16::PC);
+            //     let out = bytes::add_unsigned_signed(pc, v);
+            //     registers.set16(&registers::Registers16::PC, out);
+            //     println!("jump: PC=({}{})={}", pc, v, out);
+            // }
+
+            Op::JR(JrArgs::CheckFlag(f)) => {
+                let check = match f {
+                    CheckFlag::Z => mmu.get_flag(device::flags::Flag::Z),
+                    CheckFlag::NZ => !mmu.get_flag(device::flags::Flag::Z),
+                    CheckFlag::C => mmu.get_flag(device::flags::Flag::C),
+                    CheckFlag::NC => !mmu.get_flag(device::flags::Flag::C),
+                };
+
+                if check {
                     println!("JR: flag set!");
                     12
                 } else {
                     println!("JR: flag unset!");
+                    // jump_relative(registers, args[0] as i8);
                     let v = args[0] as i8;
                     let pc = registers.get16(&registers::Registers16::PC);
                     let out = bytes::add_unsigned_signed(pc, v);
@@ -272,8 +306,15 @@ impl Op {
                     16
                 }
             },
+            Op::JR(JrArgs::N) => {
+                let v = args[0] as i8;
+                let pc = registers.get16(&registers::Registers16::PC);
+                let out = bytes::add_unsigned_signed(pc, v);
+                println!("JR: PC=({}{})={}", pc, v, out);
+                registers.set16(&registers::Registers16::PC, out);
+                12
+            },
 
-            Op::JR(_) => panic!("Not Implemented"),
             Op::JP(_) => panic!("Not Implemented"),
             Op::Call(CallArgs::N) => {
                 push_stack(registers, mmu, &registers::Registers16::PC);
@@ -412,6 +453,19 @@ impl Op {
                 4
             },
             Op::XOR(Destination8::Mem(_)) => panic!("Not Implemented"),
+            Op::Sub(Destination8::R(r)) => {
+                let a = registers.get8(&registers::Registers8::A);
+                let v = registers.get8(r);
+                let n = a.wrapping_sub(v);
+
+                mmu.set_flag(device::flags::Flag::N, true);
+                mmu.set_flag(device::flags::Flag::Z, n == 0);
+                mmu.set_flag(device::flags::Flag::H, v & 0x0F == 0x0F);
+
+                registers.set8(&registers::Registers8::A, n);
+                4
+            },
+            Op::Sub(Destination8::Mem(_)) => panic!("Not Implemented"),
 
 
             // End ALU Codes
@@ -475,22 +529,39 @@ pub fn new() -> Instructions {
     let mut instructions = vec![Op::NotImplemented;256];
 
     instructions[0x0000] = Op::NOP;
+    instructions[0x0004] = Op::Inc8(Destination8::R(registers::Registers8::B));
     instructions[0x0005] = Op::Dec8(Destination8::R(registers::Registers8::B));
-    instructions[0x0006] = Op::Load8(Destination8::R(registers::Registers8::B), Source8::N);
+    instructions[0x0006] = Op::Load8(Load8Args::R(registers::Registers8::B), Load8Args::N);
     instructions[0x000C] = Op::Inc8(Destination8::R(registers::Registers8::C));
-    instructions[0x000E] = Op::Load8(Destination8::R(registers::Registers8::C), Source8::N);
+    instructions[0x000D] = Op::Dec8(Destination8::R(registers::Registers8::C));
+    instructions[0x000E] = Op::Load8(Load8Args::R(registers::Registers8::C), Load8Args::N);
     instructions[0x0011] = Op::Load16(Destination16::R(registers::Registers16::DE), Source16::N);
     instructions[0x0013] = Op::Inc16(Destination16::R(registers::Registers16::DE));
+    instructions[0x0015] = Op::Dec8(Destination8::R(registers::Registers8::D));
+    instructions[0x0016] = Op::Load8(Load8Args::R(registers::Registers8::D), Load8Args::N);
     instructions[0x0017] = Op::RL(Destination8::R(registers::Registers8::A));
-    instructions[0x003E] = Op::Load8(Destination8::R(registers::Registers8::A), Source8::N);
-    instructions[0x001A] = Op::Load8(Destination8::R(registers::Registers8::A), Source8::Mem(registers::Registers16::DE));
+    instructions[0x0018] = Op::JR(JrArgs::N);
+    instructions[0x001A] = Op::Load8(Load8Args::R(registers::Registers8::A), Load8Args::Mem(registers::Registers16::DE));
+    instructions[0x001D] = Op::Dec8(Destination8::R(registers::Registers8::E));
+    instructions[0x001E] = Op::Load8(Load8Args::R(registers::Registers8::E), Load8Args::N);
+    instructions[0x0020] = Op::JR(JrArgs::CheckFlag(CheckFlag::NZ));
     instructions[0x0021] = Op::Load16(Destination16::R(registers::Registers16::HL), Source16::N);
     instructions[0x0022] = Op::LoadAndInc;
     instructions[0x0023] = Op::Inc8(Destination8::Mem(registers::Registers16::HL));
-    instructions[0x004F] = Op::Load8(Destination8::R(registers::Registers8::C), Source8::R(registers::Registers8::A));
+    instructions[0x0024] = Op::Inc8(Destination8::R(registers::Registers8::H));
+    instructions[0x0028] = Op::JR(JrArgs::CheckFlag(CheckFlag::Z));
     instructions[0x0031] = Op::Load16(Destination16::R(registers::Registers16::SP), Source16::N);
     instructions[0x0032] = Op::LoadAndDec;
-    instructions[0x0020] = Op::JR(JrArgs::CheckFlag(CheckFlag::NZ));
+    instructions[0x003D] = Op::Dec8(Destination8::R(registers::Registers8::D));
+    instructions[0x003E] = Op::Load8(Load8Args::R(registers::Registers8::A), Load8Args::N);
+    instructions[0x004F] = Op::Load8(Load8Args::R(registers::Registers8::C), Load8Args::R(registers::Registers8::A));
+    instructions[0x0057] = Op::Load8(Load8Args::R(registers::Registers8::D), Load8Args::R(registers::Registers8::A));
+    instructions[0x0067] = Op::Load8(Load8Args::R(registers::Registers8::H), Load8Args::R(registers::Registers8::A));
+    instructions[0x0076] = Op::Halt;
+    instructions[0x0077] = Op::Load8(Load8Args::Mem(registers::Registers16::HL), Load8Args::R(registers::Registers8::A));
+    instructions[0x007B] = Op::Load8(Load8Args::R(registers::Registers8::A), Load8Args::R(registers::Registers8::E));
+    instructions[0x007C] = Op::Load8(Load8Args::R(registers::Registers8::A), Load8Args::R(registers::Registers8::H));
+    instructions[0x0090] = Op::Sub(Destination8::R(registers::Registers8::B));
     instructions[0x00AF] = Op::XOR(Destination8::R(registers::Registers8::A));
     instructions[0x00C5] = Op::Push(registers::Registers16::BC);
     instructions[0x00C1] = Op::Pop(registers::Registers16::BC);
@@ -499,10 +570,9 @@ pub fn new() -> Instructions {
     instructions[0x00C9] = Op::Ret(RetArgs::Null);
     instructions[0x00E2] = Op::LoadFF00(LoadFF00Targets::C, LoadFF00Targets::A);
     instructions[0x00E0] = Op::LoadFF00(LoadFF00Targets::N, LoadFF00Targets::A);
+    instructions[0x00EA] = Op::Load8(Load8Args::N, Load8Args::R(registers::Registers8::A));
+    instructions[0x00F0] = Op::LoadFF00(LoadFF00Targets::A, LoadFF00Targets::N);
     instructions[0x00FE] = Op::Compare(Source8::N);
-    instructions[0x0076] = Op::Halt;
-    instructions[0x0077] = Op::Load8(Destination8::Mem(registers::Registers16::HL), Source8::R(registers::Registers8::A));
-    instructions[0x007B] = Op::Load8(Destination8::R(registers::Registers8::A), Source8::R(registers::Registers8::E));
 
     let mut cb_instructions = vec![Op::NotImplemented;256];
     cb_instructions[0x007C] = Op::BIT(7, Destination8::R(registers::Registers8::H));
