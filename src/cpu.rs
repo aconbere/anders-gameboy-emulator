@@ -16,14 +16,6 @@ pub struct CPU <'a> {
 }
 
 impl <'a> CPU <'a> {
-    // pub fn next_frame(&mut self) {
-    //     println!("FRAME");
-    //     while self.cycles <= 70244 {
-    //         self.cycles += self.tick() as u32;
-    //     }
-    //     self.cycles -= 70244
-    // }
-
     pub fn tick(&mut self, mmu:&mut mmu::MMU) -> u8 {
         match self.state {
             State::Running => self.sub_tick(mmu, false),

@@ -60,6 +60,9 @@ fn main() {
     loop {
         let m = &mut mmu;
         let cycles = cpu.tick(m);
-        gpu.tick(m, cycles);
+
+        if m.hardware_io.get_lcd_control_flag(device::hardware_io::LCDControlFlag::LCDDisplayEnable) {
+            gpu.tick(m, cycles);
+        }
     }
 }

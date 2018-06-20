@@ -186,6 +186,7 @@ impl Op {
             Op::Load8(Destination8::R(r1), Source8::R(r2)) => {
                 let v = registers.get8(r2);
                 registers.set8(r1, v);
+                println!("Load8({:?}, {:?}) {:?}={:X}", r1, r2, r1, registers.get8(r1));
                 4
             },
             Op::Load8(Destination8::R(r1), Source8::N) => {
@@ -221,6 +222,7 @@ impl Op {
             Op::LoadFF00(LoadFF00Targets::C, LoadFF00Targets::A)=> {
                 let c = registers.get8(&registers::Registers8::C) as u16;
                 let a = registers.get8(&registers::Registers8::A);
+                println!("Load FF00+{:X} with {:X}", c, a);
                 mmu.set(c + 0xFF00, a);
                 8
             },
@@ -239,6 +241,7 @@ impl Op {
             Op::LoadFF00(LoadFF00Targets::N, LoadFF00Targets::A)=> {
                 let a = registers.get8(&registers::Registers8::A);
                 let ma = args[0] as u16;
+                println!("Load FF00+{:X} with {:X}", ma, a);
                 mmu.set(ma + 0xFF00, a);
                 8
             },
@@ -273,6 +276,11 @@ impl Op {
             Op::Call(CallArgs::N) => {
                 push_stack(registers, mmu, &registers::Registers16::PC);
                 registers.set16(&registers::Registers16::PC, bytes::combine_little(args[0], args[1]));
+                println!(
+                    "Call - SP:{:X} PC{:X}",
+                    registers.get16(&registers::Registers16::SP),
+                    registers.get16(&registers::Registers16::PC)
+                );
                 24
             },
             Op::Call(_) => panic!("Not Implemented"),
@@ -409,10 +417,8 @@ impl Op {
                 println!("Bit: {}, {:b}", v, v);
                 if bytes::check_bit(v, *location) {
                     mmu.set_flag(device::flags::Flag::Z, false);
-                    println!("Clearing flag: {}", mmu.get_flag(device::flags::Flag::Z));
                 } else {
                     mmu.set_flag(device::flags::Flag::Z, true);
-                    println!("Setting flag: {}", mmu.get_flag(device::flags::Flag::Z));
                 }
                 8
             },
@@ -421,15 +427,19 @@ impl Op {
                 let v = registers.get8(r);
                 let c = mmu.get_flag(device::flags::Flag::C);
 
+                println!("IN: {:b}", v);
+
                 let out = if c {
                     (v << 1) | 0x0001
                 } else {
                     v << 1
                 };
+                println!("OUT: {:b}", out);
 
                 mmu.set_flag(device::flags::Flag::C, bytes::check_bit(v, 7));
 
                 registers.set8(r, out);
+                println!("RL{:?}, {:?}={:X}, flags={}", r, r, registers.get8(r), mmu.get_flag(device::flags::Flag::C));
                 8
             }
             Op::RL(Destination8::Mem(_)) => panic!("Not Implemented"),

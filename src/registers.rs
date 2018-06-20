@@ -10,6 +10,22 @@ pub enum Registers16 {
     AF,BC,DE,HL,PC,SP
 }
 
+/* 16 bit combined registers
+ *
+ * Taking the case of HL for example, it is the combination of the 8 bit registers H and L
+ * Data stored in HL are stored in little endian order, that is the most significant byte
+ * is stored Last.
+ *
+ * so if we wanted to store 1024 (0400 in hex) then we want to store into HL
+ *
+ * H = 00
+ * L = 04
+ *
+ * and when we read it out we want to do
+ *
+ * L << 8 | H
+ */
+
 pub struct Registers {
     a:u8,
     b:u8,
@@ -38,15 +54,10 @@ impl Registers {
     }
     pub fn get16(&self, r:&Registers16) -> u16 {
         match r {
-            // Registers16::AF => bytes::combine_little(self.a, self.b),
-            // Registers16::BC => bytes::combine_little(self.b, self.c),
-            // Registers16::DE => bytes::combine_little(self.d, self.e),
-            // Registers16::HL => bytes::combine_little(self.h, self.l),
-
-            Registers16::AF => bytes::combine_little(self.b, self.f),
-            Registers16::BC => bytes::combine_little(self.c, self.b),
-            Registers16::DE => bytes::combine_little(self.e, self.d),
-            Registers16::HL => bytes::combine_little(self.l, self.h),
+            Registers16::AF => bytes::combine_little(self.a, self.f),
+            Registers16::BC => bytes::combine_little(self.b, self.c),
+            Registers16::DE => bytes::combine_little(self.d, self.e),
+            Registers16::HL => bytes::combine_little(self.h, self.l),
             Registers16::PC => self.pc,
             Registers16::SP => self.sp
         }
@@ -67,15 +78,10 @@ impl Registers {
 
     pub fn set16(&mut self, r:&Registers16, v:u16) {
         match r {
-            // Registers16::AF => self.set_combined(&Registers8::A, &Registers8::F, v),
-            // Registers16::BC => self.set_combined(&Registers8::B, &Registers8::C, v),
-            // Registers16::DE => self.set_combined(&Registers8::D, &Registers8::E, v),
-            // Registers16::HL => self.set_combined(&Registers8::H, &Registers8::L, v),
-
-            Registers16::AF => self.set_combined(&Registers8::F, &Registers8::A, v),
-            Registers16::BC => self.set_combined(&Registers8::C, &Registers8::B, v),
-            Registers16::DE => self.set_combined(&Registers8::E, &Registers8::D, v),
-            Registers16::HL => self.set_combined(&Registers8::L, &Registers8::H, v),
+            Registers16::AF => self.set_combined(&Registers8::A, &Registers8::F, v),
+            Registers16::BC => self.set_combined(&Registers8::B, &Registers8::C, v),
+            Registers16::DE => self.set_combined(&Registers8::D, &Registers8::E, v),
+            Registers16::HL => self.set_combined(&Registers8::H, &Registers8::L, v),
             Registers16::PC => self.pc = v,
             Registers16::SP => self.sp = v
         }
