@@ -7,7 +7,7 @@ use bytes;
 use device::Device;
 
 pub struct MMU<'a> {
-    pub restart_and_interupt: &'a mut device::restart_and_interrupt::RestartAndInterrupt,
+    pub restart_and_interrupt: &'a mut device::restart_and_interrupt::RestartAndInterrupt,
     pub cartridge: &'a mut device::cartridge::Cartridge,
     pub video_ram: &'a mut device::vram::VRam,
     pub cartridge_ram: &'a mut device::not_implemented::NotImplemented,
@@ -18,20 +18,20 @@ pub struct MMU<'a> {
     pub unusable_memory: &'a mut device::not_implemented::NotImplemented,
     pub hardware_io: &'a mut device::hardware_io::HardwareIO,
     pub zero_page: &'a mut device::zero_page::ZeroPage,
-    pub interupt_enable_flag: &'a mut device::flags::Flags,
+    pub interrupt_enable_flag: &'a mut device::flags::Flags,
 }
 
 impl <'a> MMU <'a> {
     pub fn set_flag(&mut self, f:device::flags::Flag, v:bool) {
         if v {
-            self.interupt_enable_flag.set_flag(f);
+            self.interrupt_enable_flag.set_flag(f);
         } else {
-            self.interupt_enable_flag.clear_flag(f);
+            self.interrupt_enable_flag.clear_flag(f);
         }
     }
 
     pub fn get_flag(&self, f:device::flags::Flag) -> bool {
-        self.interupt_enable_flag.get_flag(f)
+        self.interrupt_enable_flag.get_flag(f)
     }
 
 
@@ -45,7 +45,7 @@ impl <'a> MMU <'a> {
         let k = device::get_kind(address);
 
         match k {
-            device::Kind::RestartAndInterrupt => self.restart_and_interupt.get(address),
+            device::Kind::RestartAndInterrupt => self.restart_and_interrupt.get(address),
 
             device::Kind::CartridgeHeader | device::Kind::CartridgeROMBank0 | device::Kind::CartridgeROMBank1 =>
                 self.cartridge.get(address),
@@ -61,7 +61,7 @@ impl <'a> MMU <'a> {
             device::Kind::UnusableMemory => self.unusable_memory.get(address),
             device::Kind::HardwareIORegisters => self.hardware_io.get(address - 0xFF00),
             device::Kind::ZeroPage => self.zero_page.get(address - 0xFF80),
-            device::Kind::InterruptEnableFlag => self.interupt_enable_flag.get(address),
+            device::Kind::InterruptEnableFlag => self.interrupt_enable_flag.get(address),
         }
     }
 
@@ -69,7 +69,7 @@ impl <'a> MMU <'a> {
         let k = device::get_kind(address);
 
         match k {
-            device::Kind::RestartAndInterrupt => self.restart_and_interupt.set(address, v),
+            device::Kind::RestartAndInterrupt => self.restart_and_interrupt.set(address, v),
             device::Kind::CartridgeHeader | device::Kind::CartridgeROMBank0 | device::Kind::CartridgeROMBank1 =>
                 self.cartridge.set(address, v),
 
@@ -84,32 +84,7 @@ impl <'a> MMU <'a> {
             device::Kind::UnusableMemory => self.unusable_memory.set(address, v),
             device::Kind::HardwareIORegisters => self.hardware_io.set(address - 0xFF00, v),
             device::Kind::ZeroPage => self.zero_page.set(address - 0xFF80, v),
-            device::Kind::InterruptEnableFlag => self.interupt_enable_flag.set(address, v),
+            device::Kind::InterruptEnableFlag => self.interrupt_enable_flag.set(address, v),
         }
     }
 }
-
-// pub fn new <'a> (
-//     restart_and_interupt: &'a device::restart_and_interrupt::RestartAndInterrupt,
-//     cartridge: &'a mut device::cartridge::Cartridge,
-//     video_ram: &'a mut device::vram::VRam,
-//     hardware_io: &'a device::hardware_io::HardwareIO,
-//     flags: &'a mut device::flags::Flags,
-// ) -> MMU <'a> {
-// 
-//     MMU {
-//         restart_and_interupt: &mut restart_and_interupt,
-//         cartridge: &mut cartridge,
-//         video_ram: &mut video_ram,
-//         cartridge_ram: &device::not_implemented::NotImplemented{},
-//         internal_ram_bank_0: &device::not_implemented::NotImplemented{},
-//         internal_ram_bank_1: &device::not_implemented::NotImplemented{},
-//         echo_ram: &device::not_implemented::NotImplemented{},
-//         object_attribute_memory: &device::not_implemented::NotImplemented{},
-//         unusable_memory: &device::not_implemented::NotImplemented{},
-//         hardware_io: &hardware_io,
-//         zero_page: &device::zero_page::ZeroPage{storage: [0;127]},
-//         interupt_enable_flag: &mut flags,
-//     }
-// }
-// 

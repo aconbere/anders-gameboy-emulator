@@ -34,13 +34,13 @@ fn main() {
     let mut cartridge = device::cartridge::load_from_file(
         String::from("/Users/anders/Projects/gb_test_roms/sheepitup.gb")
     );
-    let mut restart_and_interupt = device::restart_and_interrupt::new(GBM_BOOT_ROM);
+    let mut restart_and_interrupt = device::restart_and_interrupt::new(GBM_BOOT_ROM);
     let mut flags = device::flags::new();
     let mut vram = device::vram::new();
     let mut hardware_io = device::hardware_io::new();
 
     let mut mmu = mmu::MMU {
-        restart_and_interupt: &mut restart_and_interupt,
+        restart_and_interrupt: &mut restart_and_interrupt,
         cartridge: &mut cartridge,
         video_ram: &mut vram,
         cartridge_ram: &mut device::not_implemented::NotImplemented{},

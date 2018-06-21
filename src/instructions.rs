@@ -84,6 +84,8 @@ pub enum RetArgs {
 pub enum Op {
     NotImplemented,
     NOP,
+    DI, // Disable interrupts
+    EI, // Enable interrupts
     Load8(Load8Args, Load8Args),
     Load16(Destination16, Source16),
 
@@ -93,6 +95,7 @@ pub enum Op {
     Dec16(Destination16),
     XOR(Destination8),
     Sub(Destination8),
+    Add(Destination8),
 
 
     LoadAndInc,
@@ -113,6 +116,62 @@ pub enum Op {
     // CB extras
     BIT(u8, Destination8),
     RL(Destination8)
+}
+
+fn jump(registers: &mut registers::Registers, v:u16) {
+    registers.set16(&registers::Registers16::PC, v);
+}
+
+fn jump_relative(registers: &mut registers::Registers, v:i8) {
+    let pc = registers.get16(&registers::Registers16::PC);
+    let out = bytes::add_unsigned_signed(pc, v);
+    registers.set16(&registers::Registers16::PC, out);
+    println!("jump: PC=({}{})={}", pc, v, out);
+}
+
+fn compare(
+    registers:&mut registers::Registers, 
+    mmu:&mut mmu::MMU,
+    v:u8
+) {
+    let a = registers.get8(&registers::Registers8::A);
+
+    println!("\tCompare: A {:X} to V {:X}", a, v);
+
+    mmu.set_flag(device::flags::Flag::N, true);
+    mmu.set_flag(device::flags::Flag::Z, a == v);
+    mmu.set_flag(device::flags::Flag::H, (0x0F & v) > (0x0F & a));
+    mmu.set_flag(device::flags::Flag::C, v > a);
+}
+
+fn sub(
+    registers: &mut registers::Registers,
+    mmu: &mut mmu::MMU,
+    v:u8
+) {
+    let a = registers.get8(&registers::Registers8::A);
+    let n = a.wrapping_sub(v);
+
+    mmu.set_flag(device::flags::Flag::N, true);
+    mmu.set_flag(device::flags::Flag::Z, n == 0);
+    mmu.set_flag(device::flags::Flag::H, v & 0x0F == 0x0F);
+
+    registers.set8(&registers::Registers8::A, n);
+}
+
+fn add(
+    registers: &mut registers::Registers,
+    mmu: &mut mmu::MMU,
+    v:u8
+) {
+    let a = registers.get8(&registers::Registers8::A);
+    let n = a.wrapping_add(v);
+
+    mmu.set_flag(device::flags::Flag::N, false);
+    mmu.set_flag(device::flags::Flag::Z, n == 0);
+    mmu.set_flag(device::flags::Flag::H, v & 0x0F == 0x0F);
+
+    registers.set8(&registers::Registers8::A, n);
 }
 
 fn load_to_memory(
@@ -172,6 +231,7 @@ impl Op {
             Op::LoadAndDec => 0,
             Op::XOR(_) => 0,
             Op::Sub(_) => 0,
+            Op::Add(_) => 0,
             Op::JR(_) => 1,
             Op::JP(_) => 2,
             Op::LoadFF00(_, LoadFF00Targets::N) => 1,
@@ -277,13 +337,6 @@ impl Op {
                 8
             },
 
-            // fn jump_relative(&mut registers:registers::Registers, v:i8) {
-            //     let pc = registers.get16(&registers::Registers16::PC);
-            //     let out = bytes::add_unsigned_signed(pc, v);
-            //     registers.set16(&registers::Registers16::PC, out);
-            //     println!("jump: PC=({}{})={}", pc, v, out);
-            // }
-
             Op::JR(JrArgs::CheckFlag(f)) => {
                 let check = match f {
                     CheckFlag::Z => mmu.get_flag(device::flags::Flag::Z),
@@ -297,25 +350,43 @@ impl Op {
                     12
                 } else {
                     println!("JR: flag unset!");
-                    // jump_relative(registers, args[0] as i8);
-                    let v = args[0] as i8;
-                    let pc = registers.get16(&registers::Registers16::PC);
-                    let out = bytes::add_unsigned_signed(pc, v);
-                    println!("JR: PC=({}{})={}", pc, v, out);
-                    registers.set16(&registers::Registers16::PC, out);
+                    jump_relative(registers, args[0] as i8);
                     16
                 }
             },
             Op::JR(JrArgs::N) => {
-                let v = args[0] as i8;
-                let pc = registers.get16(&registers::Registers16::PC);
-                let out = bytes::add_unsigned_signed(pc, v);
-                println!("JR: PC=({}{})={}", pc, v, out);
-                registers.set16(&registers::Registers16::PC, out);
+                jump_relative(registers, args[0] as i8);
                 12
             },
 
-            Op::JP(_) => panic!("Not Implemented"),
+            Op::JP(JpArgs::CheckFlag(f)) => {
+                let check = match f {
+                    CheckFlag::Z => mmu.get_flag(device::flags::Flag::Z),
+                    CheckFlag::NZ => !mmu.get_flag(device::flags::Flag::Z),
+                    CheckFlag::C => mmu.get_flag(device::flags::Flag::C),
+                    CheckFlag::NC => !mmu.get_flag(device::flags::Flag::C),
+                };
+
+                if check {
+                    println!("JP: flag set!");
+                    12
+                } else {
+                    println!("JP: flag unset!");
+                    jump(registers, bytes::combine_little(args[0],args[1]));
+                    16
+                }
+            },
+            Op::JP(JpArgs::N) => {
+                jump(registers, bytes::combine_little(args[0], args[1]));
+                16
+            },
+            Op::JP(JpArgs::HL) => {
+                let m = registers.get16(&registers::Registers16::HL);
+                let v = mmu.get16(m);
+                jump(registers, v);
+                16
+            },
+
             Op::Call(CallArgs::N) => {
                 push_stack(registers, mmu, &registers::Registers16::PC);
                 registers.set16(&registers::Registers16::PC, bytes::combine_little(args[0], args[1]));
@@ -426,19 +497,16 @@ impl Op {
             Op::Dec16(_) => panic!("Not Implemented"),
 
             Op::Compare(Source8::N) => {
-                let a = registers.get8(&registers::Registers8::A);
-                let v = args[0];
-
-                println!("\tCompare: A {:X} to V {:X}", a, v);
-
-                mmu.set_flag(device::flags::Flag::N, true);
-                mmu.set_flag(device::flags::Flag::Z, a == v);
-                mmu.set_flag(device::flags::Flag::H, (0x0F & v) > (0x0F & a));
-                mmu.set_flag(device::flags::Flag::C, v > a);
+                compare(registers, mmu, args[0]);
                 8
             },
             Op::Compare(Source8::R(_)) => panic!("Not Implemented"),
-            Op::Compare(Source8::Mem(_)) => panic!("Not Implemented"),
+            Op::Compare(Source8::Mem(r)) => {
+                let m = registers.get16(r);
+                let v = mmu.get(m);
+                compare(registers, mmu, v);
+                8
+            },
             Op::XOR(Destination8::R(r)) => {
                 let v = registers.get8(r);
                 let a = registers.get8(&registers::Registers8::A);
@@ -454,19 +522,28 @@ impl Op {
             },
             Op::XOR(Destination8::Mem(_)) => panic!("Not Implemented"),
             Op::Sub(Destination8::R(r)) => {
-                let a = registers.get8(&registers::Registers8::A);
                 let v = registers.get8(r);
-                let n = a.wrapping_sub(v);
-
-                mmu.set_flag(device::flags::Flag::N, true);
-                mmu.set_flag(device::flags::Flag::Z, n == 0);
-                mmu.set_flag(device::flags::Flag::H, v & 0x0F == 0x0F);
-
-                registers.set8(&registers::Registers8::A, n);
+                sub(registers, mmu, v);
                 4
             },
-            Op::Sub(Destination8::Mem(_)) => panic!("Not Implemented"),
+            Op::Sub(Destination8::Mem(r)) => {
+                let m = registers.get16(r);
+                let v = mmu.get(m);
+                sub(registers, mmu, v);
+                8
+            },
 
+            Op::Add(Destination8::R(r)) => {
+                let v = registers.get8(r);
+                add(registers, mmu, v);
+                4
+            },
+            Op::Add(Destination8::Mem(r)) => {
+                let m = registers.get16(r);
+                let v = mmu.get(m);
+                add(registers, mmu, v);
+                8
+            },
 
             // End ALU Codes
 
@@ -559,12 +636,18 @@ pub fn new() -> Instructions {
     instructions[0x0067] = Op::Load8(Load8Args::R(registers::Registers8::H), Load8Args::R(registers::Registers8::A));
     instructions[0x0076] = Op::Halt;
     instructions[0x0077] = Op::Load8(Load8Args::Mem(registers::Registers16::HL), Load8Args::R(registers::Registers8::A));
+    instructions[0x0078] = Op::Load8(Load8Args::R(registers::Registers8::A), Load8Args::R(registers::Registers8::B));
     instructions[0x007B] = Op::Load8(Load8Args::R(registers::Registers8::A), Load8Args::R(registers::Registers8::E));
     instructions[0x007C] = Op::Load8(Load8Args::R(registers::Registers8::A), Load8Args::R(registers::Registers8::H));
+    instructions[0x007D] = Op::Load8(Load8Args::R(registers::Registers8::A), Load8Args::R(registers::Registers8::L));
+    instructions[0x0086] = Op::Add(Destination8::Mem(registers::Registers16::HL));
     instructions[0x0090] = Op::Sub(Destination8::R(registers::Registers8::B));
     instructions[0x00AF] = Op::XOR(Destination8::R(registers::Registers8::A));
-    instructions[0x00C5] = Op::Push(registers::Registers16::BC);
+    instructions[0x00BE] = Op::Compare(Source8::Mem(registers::Registers16::HL));
     instructions[0x00C1] = Op::Pop(registers::Registers16::BC);
+    instructions[0x00C2] = Op::JP(JpArgs::CheckFlag(CheckFlag::NZ));
+    instructions[0x00C3] = Op::JP(JpArgs::N);
+    instructions[0x00C5] = Op::Push(registers::Registers16::BC);
     instructions[0x00CB] = Op::PrefixCB;
     instructions[0x00CD] = Op::Call(CallArgs::N);
     instructions[0x00C9] = Op::Ret(RetArgs::Null);
