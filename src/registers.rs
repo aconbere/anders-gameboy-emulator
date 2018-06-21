@@ -136,6 +136,10 @@ impl Registers {
         self.set8(r2, low);
     }
 
+    pub fn set_interrupts_enabled(&mut self, b:bool) {
+        self.interrupts_enabled = b
+    }
+
     pub fn get_interrupts_enabled(&self) -> bool {
         self.interrupts_enabled
     }
@@ -148,4 +152,3 @@ pub fn new() -> Registers {
         interrupts_enabled: false
     }
 }
-

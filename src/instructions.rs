@@ -84,8 +84,8 @@ pub enum RetArgs {
 pub enum Op {
     NotImplemented,
     NOP,
-    // DI, // Disable interrupts
-    // EI, // Enable interrupts
+    DI, // Disable interrupts
+    EI, // Enable interrupts
     Load8(Load8Args, Load8Args),
     Load16(Destination16, Source16),
 
@@ -214,6 +214,8 @@ impl Op {
         match self {
             Op::NotImplemented => 0,
             Op::NOP => 0,
+            Op::DI => 0,
+            Op::EI => 0,
             Op::Halt => 0,
             Op::PrefixCB => 0,
 
@@ -254,6 +256,14 @@ impl Op {
         match self {
             Op::NotImplemented => panic!("NotImplemented Instruction"),
             Op::NOP => 4,
+            Op::DI => {
+                registers.set_interrupts_enabled(false);
+                4
+            },
+            Op::EI => {
+                registers.set_interrupts_enabled(true);
+                4
+            },
             Op::Halt => 4,
             Op::PrefixCB => 4,
             Op::Load8(Load8Args::R(r1), Load8Args::R(r2)) => {
@@ -289,7 +299,9 @@ impl Op {
                 12
             },
             Op::Load16(Destination16::R(r1), Source16::N) => {
-                registers.set16(r1, bytes::combine_little(args[0], args[1]));
+                let v = bytes::combine_little(args[0], args[1]);
+                registers.set16(r1, v);
+                println!("Load16({:?}) {:?}={:X}", r1, r1, v);
                 12
             },
             Op::Load16(Destination16::Mem(_), _) => {
@@ -329,6 +341,7 @@ impl Op {
             Op::LoadAndDec => {
                 load_to_memory(registers, mmu, &registers::Registers16::HL, &registers::Registers8::A);
                 registers.dec_hl();
+                println!("LoadAndDec: HL={:X}", registers.get16(&registers::Registers16::HL));
                 8
             },
             Op::LoadAndInc => {
@@ -656,6 +669,7 @@ pub fn new() -> Instructions {
     instructions[0x00E0] = Op::LoadFF00(LoadFF00Targets::N, LoadFF00Targets::A);
     instructions[0x00EA] = Op::Load8(Load8Args::N, Load8Args::R(registers::Registers8::A));
     instructions[0x00F0] = Op::LoadFF00(LoadFF00Targets::A, LoadFF00Targets::N);
+    instructions[0x00F3] = Op::DI;
     instructions[0x00FE] = Op::Compare(Source8::N);
 
     let mut cb_instructions = vec![Op::NotImplemented;256];

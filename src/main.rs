@@ -45,8 +45,8 @@ fn main() {
         cartridge: &mut cartridge,
         video_ram: &mut vram,
         cartridge_ram: &mut device::not_implemented::NotImplemented{},
-        internal_ram_bank_0: &mut device::not_implemented::NotImplemented{},
-        internal_ram_bank_1: &mut device::not_implemented::NotImplemented{},
+        internal_ram_bank_0: &mut device::ram_bank::new(),
+        internal_ram_bank_1: &mut device::ram_bank::new(),
         echo_ram: &mut device::not_implemented::NotImplemented{},
         object_attribute_memory: &mut device::not_implemented::NotImplemented{},
         unusable_memory: &mut device::not_implemented::NotImplemented{},
@@ -71,7 +71,9 @@ fn main() {
         if r.get_interrupts_enabled() {
             let requested = m.hardware_io.get_requested_interrupts();
             let enabled = m.interrupt_enable.get_enabled_interrupts();
-            let _interrupts = device::interrupt::flags(enabled, requested);
+            for i in device::interrupt::flags(enabled, requested) {
+                println!("Saw interrupt: {:?}", i);
+            }
         }
     }
 }

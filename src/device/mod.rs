@@ -6,6 +6,7 @@ pub mod cartridge;
 pub mod zero_page;
 pub mod gpu;
 pub mod interrupt;
+pub mod ram_bank;
 
 #[derive(Debug)]
 pub enum Kind {
@@ -42,8 +43,11 @@ pub fn get_kind(address:u16) -> Kind {
         0x9C00...0x9FFF => Kind::BackgroundMapData2,
 
         0xA000...0xBFFF => Kind::CartridgeRAM,
+
+        // Internal Ram
         0xC000...0xCFFF => Kind::InternalRAMBank0,
         0xD000...0xDFFF => Kind::InternalRAMBank1,
+
         0xE000...0xFDFF => Kind::EchoRAM,
         0xFE00...0xFE9F => Kind::ObjectAttributeMemory,
         0xFEA0...0xFEFF => Kind::UnusableMemory,
