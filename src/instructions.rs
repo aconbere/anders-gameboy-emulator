@@ -1,7 +1,6 @@
 use ::mmu;
 use ::registers;
 use ::bytes;
-use device;
 
 /*
  * LD r,r
@@ -679,5 +678,26 @@ pub fn new() -> Instructions {
     Instructions {
         instructions: instructions,
         cb_instructions: cb_instructions
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cpu;
+    use registers;
+
+
+    #[test]
+    fn test_nop() {
+        let instructions = new();
+        let mut registers = registers::new();
+        let mut mmu = mmu::new();
+        let mut cpu = cpu::new();
+
+        cpu.tick(&instructions, &mut registers, &mut mmu);
+
+        assert_eq!(3, registers.get16(&registers::Registers16::PC));
+        assert_eq!(0xFFFE, registers.get16(&registers::Registers16::SP));
     }
 }

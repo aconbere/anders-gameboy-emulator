@@ -13,3 +13,9 @@ impl Device for ZeroPage {
         self.storage[a as usize] = v;
     }
 }
+
+pub fn new() -> ZeroPage {
+    ZeroPage {
+        storage: [0;127]
+    }
+}
