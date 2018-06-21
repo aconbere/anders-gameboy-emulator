@@ -9,25 +9,35 @@ pub enum State {
     Prefix,
 }
 
-pub struct CPU <'a> {
-    instructions: &'a instructions::Instructions,
+pub struct CPU {
     state: State
 }
 
-impl <'a> CPU <'a> {
-    pub fn tick(&mut self, registers: &mut registers::Registers, mmu:&mut mmu::MMU) -> u8 {
+impl CPU {
+    pub fn tick(
+        &mut self,
+        instructions: &instructions::Instructions,
+        registers: &mut registers::Registers,
+        mmu:&mut mmu::MMU
+    ) -> u8 {
         match self.state {
             State::Running =>
-                self.sub_tick(registers, mmu, false),
+                self.sub_tick(instructions, registers, mmu, false),
             State::Prefix => {
                 self.state = State::Running;
-                self.sub_tick(registers, mmu, true)
+                self.sub_tick(instructions, registers, mmu, true)
             },
             State::Halted => 0,
         }
     }
 
-    pub fn sub_tick(&mut self, mut registers: &mut registers::Registers, mmu:&mut mmu::MMU, prefix:bool) -> u8 {
+    pub fn sub_tick(
+        &mut self,
+        instructions: &instructions::Instructions,
+        mut registers: &mut registers::Registers,
+        mmu:&mut mmu::MMU,
+        prefix:bool
+    ) -> u8 {
         println!("TICK: Prefix: {}", prefix);
 
         let pc = registers.get16(&registers::Registers16::PC);
@@ -38,9 +48,9 @@ impl <'a> CPU <'a> {
         println!("\topcode: {:X}", opcode);
 
         let instruction = if prefix {
-            self.instructions.get_cb(opcode)
+            instructions.get_cb(opcode)
         } else {
-            self.instructions.get(opcode)
+            instructions.get(opcode)
         };
 
         match instruction {
@@ -72,11 +82,8 @@ impl <'a> CPU <'a> {
     }
 }
 
-pub fn new<'a>(
-    instructions:&'a instructions::Instructions,
-) -> CPU <'a> {
+pub fn new() -> CPU {
     CPU {
-        instructions:instructions,
         state: State::Running,
     }
 }

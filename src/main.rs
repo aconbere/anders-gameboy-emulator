@@ -55,14 +55,14 @@ fn main() {
         interrupt_enable: &mut interrupt_enabled,
     };
 
-    let mut cpu = cpu::new(&instructions);
+    let mut cpu = cpu::new();
     let mut gpu = device::gpu::new();
 
     loop {
         let m = &mut mmu;
         let r = &mut registers;
 
-        let cycles = cpu.tick(r, m);
+        let cycles = cpu.tick(&instructions, r, m);
 
         if m.hardware_io.get_lcd_control_flag(device::hardware_io::LCDControlFlag::LCDDisplayEnable) {
             gpu.tick(m, cycles);
