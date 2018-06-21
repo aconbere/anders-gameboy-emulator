@@ -64,17 +64,20 @@ impl Device for HardwareIO {
 }
 
 impl HardwareIO {
-    pub fn set_lcd_control_flag(&mut self, f: LCDControlFlag, t:bool) {
-        if t {
-            self.storage[0x40] = bytes::set_bit(self.storage[0x40], f.get_index());
-        } else {
-            self.storage[0x40] = bytes::clear_bit(self.storage[0x40], f.get_index());
-        }
-    }
+    // pub fn set_lcd_control_flag(&mut self, f: LCDControlFlag, t:bool) {
+    //     if t {
+    //         self.storage[0x40] = bytes::set_bit(self.storage[0x40], f.get_index());
+    //     } else {
+    //         self.storage[0x40] = bytes::clear_bit(self.storage[0x40], f.get_index());
+    //     }
+    // }
 
     pub fn get_lcd_control_flag(&self, f: LCDControlFlag) ->bool {
         let i = f.get_index();
         bytes::check_bit(self.storage[0x40], i)
     }
 
+    pub fn get_requested_interrupts(&self) -> u8 {
+        self.storage[0x0F]
+    }
 }

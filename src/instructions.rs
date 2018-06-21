@@ -84,8 +84,8 @@ pub enum RetArgs {
 pub enum Op {
     NotImplemented,
     NOP,
-    DI, // Disable interrupts
-    EI, // Enable interrupts
+    // DI, // Disable interrupts
+    // EI, // Enable interrupts
     Load8(Load8Args, Load8Args),
     Load16(Destination16, Source16),
 
@@ -138,10 +138,10 @@ fn compare(
 
     println!("\tCompare: A {:X} to V {:X}", a, v);
 
-    mmu.set_flag(device::flags::Flag::N, true);
-    mmu.set_flag(device::flags::Flag::Z, a == v);
-    mmu.set_flag(device::flags::Flag::H, (0x0F & v) > (0x0F & a));
-    mmu.set_flag(device::flags::Flag::C, v > a);
+    registers.set_flag(registers::Flag::N, true);
+    registers.set_flag(registers::Flag::Z, a == v);
+    registers.set_flag(registers::Flag::H, (0x0F & v) > (0x0F & a));
+    registers.set_flag(registers::Flag::C, v > a);
 }
 
 fn sub(
@@ -152,9 +152,9 @@ fn sub(
     let a = registers.get8(&registers::Registers8::A);
     let n = a.wrapping_sub(v);
 
-    mmu.set_flag(device::flags::Flag::N, true);
-    mmu.set_flag(device::flags::Flag::Z, n == 0);
-    mmu.set_flag(device::flags::Flag::H, v & 0x0F == 0x0F);
+    registers.set_flag(registers::Flag::N, true);
+    registers.set_flag(registers::Flag::Z, n == 0);
+    registers.set_flag(registers::Flag::H, v & 0x0F == 0x0F);
 
     registers.set8(&registers::Registers8::A, n);
 }
@@ -167,9 +167,9 @@ fn add(
     let a = registers.get8(&registers::Registers8::A);
     let n = a.wrapping_add(v);
 
-    mmu.set_flag(device::flags::Flag::N, false);
-    mmu.set_flag(device::flags::Flag::Z, n == 0);
-    mmu.set_flag(device::flags::Flag::H, v & 0x0F == 0x0F);
+    registers.set_flag(registers::Flag::N, false);
+    registers.set_flag(registers::Flag::Z, n == 0);
+    registers.set_flag(registers::Flag::H, v & 0x0F == 0x0F);
 
     registers.set8(&registers::Registers8::A, n);
 }
@@ -339,10 +339,10 @@ impl Op {
 
             Op::JR(JrArgs::CheckFlag(f)) => {
                 let check = match f {
-                    CheckFlag::Z => mmu.get_flag(device::flags::Flag::Z),
-                    CheckFlag::NZ => !mmu.get_flag(device::flags::Flag::Z),
-                    CheckFlag::C => mmu.get_flag(device::flags::Flag::C),
-                    CheckFlag::NC => !mmu.get_flag(device::flags::Flag::C),
+                    CheckFlag::Z => registers.get_flag(registers::Flag::Z),
+                    CheckFlag::NZ => !registers.get_flag(registers::Flag::Z),
+                    CheckFlag::C => registers.get_flag(registers::Flag::C),
+                    CheckFlag::NC => !registers.get_flag(registers::Flag::C),
                 };
 
                 if check {
@@ -361,10 +361,10 @@ impl Op {
 
             Op::JP(JpArgs::CheckFlag(f)) => {
                 let check = match f {
-                    CheckFlag::Z => mmu.get_flag(device::flags::Flag::Z),
-                    CheckFlag::NZ => !mmu.get_flag(device::flags::Flag::Z),
-                    CheckFlag::C => mmu.get_flag(device::flags::Flag::C),
-                    CheckFlag::NC => !mmu.get_flag(device::flags::Flag::C),
+                    CheckFlag::Z => registers.get_flag(registers::Flag::Z),
+                    CheckFlag::NZ => !registers.get_flag(registers::Flag::Z),
+                    CheckFlag::C => registers.get_flag(registers::Flag::C),
+                    CheckFlag::NC => !registers.get_flag(registers::Flag::C),
                 };
 
                 if check {
@@ -421,9 +421,9 @@ impl Op {
                 let v = registers.get8(r);
                 let n = v.wrapping_add(1);
 
-                mmu.set_flag(device::flags::Flag::N, false);
-                mmu.set_flag(device::flags::Flag::Z, n == 0);
-                mmu.set_flag(device::flags::Flag::H, v & 0x0F == 0x0F);
+                registers.set_flag(registers::Flag::N, false);
+                registers.set_flag(registers::Flag::Z, n == 0);
+                registers.set_flag(registers::Flag::H, v & 0x0F == 0x0F);
 
                 registers.set8(r, n);
                 4
@@ -433,9 +433,9 @@ impl Op {
                 let v = mmu.get(a);
                 let n = v.wrapping_add(1);
 
-                mmu.set_flag(device::flags::Flag::N, false);
-                mmu.set_flag(device::flags::Flag::Z, n == 0);
-                mmu.set_flag(device::flags::Flag::H, v & 0x0F == 0x0F);
+                registers.set_flag(registers::Flag::N, false);
+                registers.set_flag(registers::Flag::Z, n == 0);
+                registers.set_flag(registers::Flag::H, v & 0x0F == 0x0F);
 
                 mmu.set(a, n);
                 12
@@ -444,9 +444,9 @@ impl Op {
                 let v = registers.get16(r);
                 let n = v.wrapping_add(1);
 
-                mmu.set_flag(device::flags::Flag::N, false);
-                mmu.set_flag(device::flags::Flag::Z, n == 0);
-                mmu.set_flag(device::flags::Flag::H, v & 0x00FF == 0x00FF);
+                registers.set_flag(registers::Flag::N, false);
+                registers.set_flag(registers::Flag::Z, n == 0);
+                registers.set_flag(registers::Flag::H, v & 0x00FF == 0x00FF);
 
                 registers.set16(r, n);
                 println!("Inc16: Incrementing {:?} to {:X} - {:X}", r, n, registers.get16(r));
@@ -464,9 +464,9 @@ impl Op {
                 let v = registers.get8(r);
                 let n = v.wrapping_sub(1);
 
-                mmu.set_flag(device::flags::Flag::N, true);
-                mmu.set_flag(device::flags::Flag::Z, n == 0);
-                mmu.set_flag(device::flags::Flag::H, v & 0x0F == 0x0F);
+                registers.set_flag(registers::Flag::N, true);
+                registers.set_flag(registers::Flag::Z, n == 0);
+                registers.set_flag(registers::Flag::H, v & 0x0F == 0x0F);
 
                 registers.set8(r, n);
                 4
@@ -476,9 +476,9 @@ impl Op {
                 let v = mmu.get(a);
                 let n = v.wrapping_sub(1);
 
-                mmu.set_flag(device::flags::Flag::N, true);
-                mmu.set_flag(device::flags::Flag::Z, n == 0);
-                mmu.set_flag(device::flags::Flag::H, v & 0x0F == 0x0F);
+                registers.set_flag(registers::Flag::N, true);
+                registers.set_flag(registers::Flag::Z, n == 0);
+                registers.set_flag(registers::Flag::H, v & 0x0F == 0x0F);
 
                 mmu.set(a, n);
                 12
@@ -487,9 +487,9 @@ impl Op {
                 let v = registers.get16(r);
                 let n = v.wrapping_sub(1);
 
-                mmu.set_flag(device::flags::Flag::N, false);
-                mmu.set_flag(device::flags::Flag::Z, n == 0);
-                mmu.set_flag(device::flags::Flag::H, v & 0x00FF == 0x00FF);
+                registers.set_flag(registers::Flag::N, false);
+                registers.set_flag(registers::Flag::Z, n == 0);
+                registers.set_flag(registers::Flag::H, v & 0x00FF == 0x00FF);
 
                 registers.set16(r, v + 1);
                 8
@@ -512,10 +512,10 @@ impl Op {
                 let a = registers.get8(&registers::Registers8::A);
                 let n = a ^ v;
 
-                mmu.set_flag(device::flags::Flag::N, n == 0);
-                mmu.set_flag(device::flags::Flag::Z, false);
-                mmu.set_flag(device::flags::Flag::H, false);
-                mmu.set_flag(device::flags::Flag::C, false);
+                registers.set_flag(registers::Flag::N, n == 0);
+                registers.set_flag(registers::Flag::Z, false);
+                registers.set_flag(registers::Flag::H, false);
+                registers.set_flag(registers::Flag::C, false);
 
                 registers.set8(&registers::Registers8::A, n);
                 4
@@ -554,16 +554,16 @@ impl Op {
                 let v = registers.get8(r);
                 println!("Bit: {}, {:b}", v, v);
                 if bytes::check_bit(v, *location) {
-                    mmu.set_flag(device::flags::Flag::Z, false);
+                    registers.set_flag(registers::Flag::Z, false);
                 } else {
-                    mmu.set_flag(device::flags::Flag::Z, true);
+                    registers.set_flag(registers::Flag::Z, true);
                 }
                 8
             },
             Op::BIT(_, Destination8::Mem(_)) => panic!("Not Implemented"),
             Op::RL(Destination8::R(r)) => {
                 let v = registers.get8(r);
-                let c = mmu.get_flag(device::flags::Flag::C);
+                let c = registers.get_flag(registers::Flag::C);
 
                 println!("IN: {:b}", v);
 
@@ -572,12 +572,13 @@ impl Op {
                 } else {
                     v << 1
                 };
+
                 println!("OUT: {:b}", out);
 
-                mmu.set_flag(device::flags::Flag::C, bytes::check_bit(v, 7));
+                registers.set_flag(registers::Flag::C, bytes::check_bit(v, 7));
 
                 registers.set8(r, out);
-                println!("RL{:?}, {:?}={:X}, flags={}", r, r, registers.get8(r), mmu.get_flag(device::flags::Flag::C));
+                println!("RL{:?}, {:?}={:X}, flags={:?}", r, r, registers.get8(r), registers.get_flag(registers::Flag::C));
                 8
             }
             Op::RL(Destination8::Mem(_)) => panic!("Not Implemented"),

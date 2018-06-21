@@ -10,6 +10,24 @@ pub enum Registers16 {
     AF,BC,DE,HL,PC,SP
 }
 
+pub enum Flag {
+    Z,
+    C,
+    N,
+    H,
+}
+
+impl Flag {
+    pub fn get_index(&self) -> u8  {
+        match self {
+            Flag::Z => 7,
+            Flag::N => 6,
+            Flag::H => 5,
+            Flag::C => 4,
+        }
+    }
+}
+
 /* 16 bit combined registers
  *
  * Taking the case of HL for example, it is the combination of the 8 bit registers H and L
@@ -37,6 +55,7 @@ pub struct Registers {
     l:u8,
     sp:u16,
     pc:u16,
+    interrupts_enabled:bool,
 }
 
 impl Registers {
@@ -87,6 +106,18 @@ impl Registers {
         }
     }
 
+    pub fn set_flag(&mut self, f:Flag, check:bool) {
+        if check {
+            self.f = bytes::set_bit(self.f, f.get_index());
+        } else {
+            self.f = bytes::clear_bit(self.f, f.get_index());
+        }
+    }
+
+    pub fn get_flag(&mut self, f:Flag) -> bool {
+        bytes::check_bit(self.f, f.get_index())
+    }
+
     pub fn inc_pc(&mut self) { self.pc = self.pc + 1 }
 
     pub fn dec_hl(&mut self) {
@@ -104,10 +135,17 @@ impl Registers {
         self.set8(r1, high);
         self.set8(r2, low);
     }
+
+    pub fn get_interrupts_enabled(&self) -> bool {
+        self.interrupts_enabled
+    }
 }
 
 pub fn new() -> Registers {
     // return Registers{ a:0, b:0, c:0, d:0, e:0, f:0, h:0, l:0, sp:0xFFFE, pc:0x0100 }
-    return Registers{ a:0, b:0, c:0, d:0, e:0, f:0, h:0, l:0, sp:0xFFFE, pc:0x0000 }
+    return Registers{
+        a:0, b:0, c:0, d:0, e:0, f:0, h:0, l:0, sp:0xFFFE, pc:0x0000,
+        interrupts_enabled: false
+    }
 }
 

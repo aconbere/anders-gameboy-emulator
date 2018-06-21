@@ -10,31 +10,31 @@ pub enum State {
 }
 
 pub struct CPU <'a> {
-    registers: &'a mut registers::Registers,
     instructions: &'a instructions::Instructions,
     state: State
 }
 
 impl <'a> CPU <'a> {
-    pub fn tick(&mut self, mmu:&mut mmu::MMU) -> u8 {
+    pub fn tick(&mut self, registers: &mut registers::Registers, mmu:&mut mmu::MMU) -> u8 {
         match self.state {
-            State::Running => self.sub_tick(mmu, false),
+            State::Running =>
+                self.sub_tick(registers, mmu, false),
             State::Prefix => {
                 self.state = State::Running;
-                self.sub_tick(mmu, true)
+                self.sub_tick(registers, mmu, true)
             },
             State::Halted => 0,
         }
     }
 
-    pub fn sub_tick(&mut self, mmu:&mut mmu::MMU, prefix:bool) -> u8 {
+    pub fn sub_tick(&mut self, mut registers: &mut registers::Registers, mmu:&mut mmu::MMU, prefix:bool) -> u8 {
         println!("TICK: Prefix: {}", prefix);
 
-        let pc = self.registers.get16(&registers::Registers16::PC);
+        let pc = registers.get16(&registers::Registers16::PC);
         println!("\tpc: {}", pc);
 
         let opcode = mmu.get(pc);
-        self.registers.inc_pc();
+        registers.inc_pc();
         println!("\topcode: {:X}", opcode);
 
         let instruction = if prefix {
@@ -58,14 +58,14 @@ impl <'a> CPU <'a> {
 
                 let mut args = Vec::new();
                 for _ in 0..instruction.args() {
-                    let next = self.registers.get16(&registers::Registers16::PC);
+                    let next = registers.get16(&registers::Registers16::PC);
                     args.push(mmu.get(next));
-                    self.registers.inc_pc()
+                    registers.inc_pc()
                 }
 
                 println!("\tcalling instruction: {:?} with args: {:X?}", instruction, args);
 
-                instruction.call(&mut self.registers, mmu, args)
+                instruction.call(&mut registers, mmu, args)
             }
         }
 
@@ -73,11 +73,9 @@ impl <'a> CPU <'a> {
 }
 
 pub fn new<'a>(
-    registers:&'a mut registers::Registers,
     instructions:&'a instructions::Instructions,
 ) -> CPU <'a> {
     CPU {
-        registers:registers,
         instructions:instructions,
         state: State::Running,
     }

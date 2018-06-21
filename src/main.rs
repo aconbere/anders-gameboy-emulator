@@ -35,9 +35,10 @@ fn main() {
         String::from("/Users/anders/Projects/gb_test_roms/sheepitup.gb")
     );
     let mut restart_and_interrupt = device::restart_and_interrupt::new(GBM_BOOT_ROM);
-    let mut flags = device::flags::new();
     let mut vram = device::vram::new();
     let mut hardware_io = device::hardware_io::new();
+    let mut interrupt_enabled = device::interrupt::new_enabled();
+    let mut zero_page = device::zero_page::ZeroPage{storage: [0;127]};
 
     let mut mmu = mmu::MMU {
         restart_and_interrupt: &mut restart_and_interrupt,
@@ -50,19 +51,27 @@ fn main() {
         object_attribute_memory: &mut device::not_implemented::NotImplemented{},
         unusable_memory: &mut device::not_implemented::NotImplemented{},
         hardware_io: &mut hardware_io,
-        zero_page: &mut device::zero_page::ZeroPage{storage: [0;127]},
-        interupt_enable_flag: &mut flags,
+        zero_page: &mut zero_page,
+        interrupt_enable: &mut interrupt_enabled,
     };
 
-    let mut cpu = cpu::new(&mut registers, &instructions);
+    let mut cpu = cpu::new(&instructions);
     let mut gpu = device::gpu::new();
 
     loop {
         let m = &mut mmu;
-        let cycles = cpu.tick(m);
+        let r = &mut registers;
+
+        let cycles = cpu.tick(r, m);
 
         if m.hardware_io.get_lcd_control_flag(device::hardware_io::LCDControlFlag::LCDDisplayEnable) {
             gpu.tick(m, cycles);
+        }
+
+        if r.get_interrupts_enabled() {
+            let requested = m.hardware_io.get_requested_interrupts();
+            let enabled = m.interrupt_enable.get_enabled_interrupts();
+            let _interrupts = device::interrupt::flags(enabled, requested);
         }
     }
 }

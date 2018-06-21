@@ -18,23 +18,10 @@ pub struct MMU<'a> {
     pub unusable_memory: &'a mut device::not_implemented::NotImplemented,
     pub hardware_io: &'a mut device::hardware_io::HardwareIO,
     pub zero_page: &'a mut device::zero_page::ZeroPage,
-    pub interrupt_enable_flag: &'a mut device::flags::Flags,
+    pub interrupt_enable: &'a mut device::interrupt::Enabled,
 }
 
 impl <'a> MMU <'a> {
-    pub fn set_flag(&mut self, f:device::flags::Flag, v:bool) {
-        if v {
-            self.interrupt_enable_flag.set_flag(f);
-        } else {
-            self.interrupt_enable_flag.clear_flag(f);
-        }
-    }
-
-    pub fn get_flag(&self, f:device::flags::Flag) -> bool {
-        self.interrupt_enable_flag.get_flag(f)
-    }
-
-
     pub fn get16(&self, address:u16) -> u16 {
         let mh = self.get(address);
         let ml = self.get(address + 1);
@@ -61,7 +48,7 @@ impl <'a> MMU <'a> {
             device::Kind::UnusableMemory => self.unusable_memory.get(address),
             device::Kind::HardwareIORegisters => self.hardware_io.get(address - 0xFF00),
             device::Kind::ZeroPage => self.zero_page.get(address - 0xFF80),
-            device::Kind::InterruptEnableFlag => self.interrupt_enable_flag.get(address),
+            device::Kind::InterruptEnableFlag => self.interrupt_enable.get(address),
         }
     }
 
@@ -84,7 +71,7 @@ impl <'a> MMU <'a> {
             device::Kind::UnusableMemory => self.unusable_memory.set(address, v),
             device::Kind::HardwareIORegisters => self.hardware_io.set(address - 0xFF00, v),
             device::Kind::ZeroPage => self.zero_page.set(address - 0xFF80, v),
-            device::Kind::InterruptEnableFlag => self.interrupt_enable_flag.set(address, v),
+            device::Kind::InterruptEnableFlag => self.interrupt_enable.set(address, v),
         }
     }
 }
