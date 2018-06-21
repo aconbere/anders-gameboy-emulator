@@ -98,8 +98,8 @@ impl MMU {
 
 pub fn new() -> MMU {
     let cartridge = device::cartridge::load_from_file(
-        // String::from("/Users/anders/Projects/gb_test_roms/sheepitup.gb")
-        String::from("/Users/anders/Projects/gb_test_roms/Mona_And_The_Witch_Hat.gb")
+        String::from("/Users/anders/Projects/gb_test_roms/sheepitup.gb")
+        // String::from("/Users/anders/Projects/gb_test_roms/Mona_And_The_Witch_Hat.gb")
     );
 
     MMU {

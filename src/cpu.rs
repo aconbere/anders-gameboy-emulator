@@ -20,26 +20,28 @@ impl CPU {
         registers: &mut registers::Registers,
         mmu:&mut mmu::MMU
     ) -> u8 {
+        println!("TICK");
         match self.state {
-            State::Running =>
-                self.sub_tick(instructions, registers, mmu, false),
+            State::Running => {
+                let instruction = self.fetch(instructions, registers, mmu, false);
+                self.execute(&instruction, registers, mmu)
+            },
             State::Prefix => {
                 self.state = State::Running;
-                self.sub_tick(instructions, registers, mmu, true)
+                let instruction = self.fetch(instructions, registers, mmu, true);
+                self.execute(&instruction, registers, mmu)
             },
             State::Halted => 0,
         }
     }
 
-    pub fn sub_tick(
+    fn fetch(
         &mut self,
         instructions: &instructions::Instructions,
-        mut registers: &mut registers::Registers,
+        registers: &mut registers::Registers,
         mmu:&mut mmu::MMU,
         prefix:bool
-    ) -> u8 {
-        println!("TICK: Prefix: {}", prefix);
-
+    ) -> instructions::Op {
         let pc = registers.get16(&registers::Registers16::PC);
         println!("\tpc: {}", pc);
 
@@ -47,11 +49,19 @@ impl CPU {
         registers.inc_pc();
         println!("\topcode: {:X}", opcode);
 
-        let instruction = if prefix {
-            instructions.get_cb(opcode)
+        if prefix {
+            *instructions.get_cb(opcode)
         } else {
-            instructions.get(opcode)
-        };
+            *instructions.get(opcode)
+        }
+    }
+
+    pub fn execute(
+        &mut self,
+        instruction: &instructions::Op,
+        mut registers: &mut registers::Registers,
+        mmu:&mut mmu::MMU
+    ) -> u8 {
 
         match instruction {
             instructions::Op::PrefixCB => {

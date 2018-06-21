@@ -358,12 +358,12 @@ impl Op {
                 };
 
                 if check {
-                    println!("JR: flag set!");
-                    12
-                } else {
-                    println!("JR: flag unset!");
+                    println!("JR: Check {:?} passed jumping", f);
                     jump_relative(registers, args[0] as i8);
                     16
+                } else {
+                    println!("JR: Check {:?} failed continuing", f);
+                    12
                 }
             },
             Op::JR(JrArgs::N) => {
@@ -462,12 +462,6 @@ impl Op {
 
                 registers.set16(r, n);
                 println!("Inc16: Incrementing {:?} to {:X} - {:X}", r, n, registers.get16(r));
-                println!(
-                    "Inc16: Incrementing {:?} to D:{:X} - E:{:X}",
-                    r,
-                    registers.get8(&registers::Registers8::D),
-                    registers.get8(&registers::Registers8::E)
-                );
                 8
             },
             Op::Inc16(Destination16::Mem(_)) => panic!("Not Implemented"),
@@ -481,6 +475,7 @@ impl Op {
                 registers.set_flag(registers::Flag::H, v & 0x0F == 0x0F);
 
                 registers.set8(r, n);
+                println!("Dec8: Decrementing {:?} to {:X} -> {:X}", r, v, registers.get8(r));
                 4
             },
             Op::Dec8(Destination8::Mem(r)) => {
@@ -640,6 +635,7 @@ pub fn new() -> Instructions {
     instructions[0x0023] = Op::Inc8(Destination8::Mem(registers::Registers16::HL));
     instructions[0x0024] = Op::Inc8(Destination8::R(registers::Registers8::H));
     instructions[0x0028] = Op::JR(JrArgs::CheckFlag(CheckFlag::Z));
+    instructions[0x002E] = Op::Load8(Load8Args::R(registers::Registers8::L), Load8Args::N);
     instructions[0x0031] = Op::Load16(Destination16::R(registers::Registers16::SP), Source16::N);
     instructions[0x0032] = Op::LoadAndDec;
     instructions[0x003D] = Op::Dec8(Destination8::R(registers::Registers8::D));
@@ -687,17 +683,27 @@ mod tests {
     use cpu;
     use registers;
 
-
     #[test]
-    fn test_nop() {
+    fn test_reading_gbm() {
         let instructions = new();
         let mut registers = registers::new();
         let mut mmu = mmu::new();
         let mut cpu = cpu::new();
 
-        cpu.tick(&instructions, &mut registers, &mut mmu);
-
+        assert_eq!(12, cpu.tick(&instructions, &mut registers, &mut mmu));
         assert_eq!(3, registers.get16(&registers::Registers16::PC));
         assert_eq!(0xFFFE, registers.get16(&registers::Registers16::SP));
+    }
+
+    #[test]
+    fn test_di() {
+        let instructions = new();
+        let mut registers = registers::new();
+        let mut mmu = mmu::new();
+        let mut cpu = cpu::new();
+
+        assert_eq!(cpu.execute(&Op::DI, &mut registers, &mut mmu), 4);
+        assert_eq!(registers.get_interrupts_enabled(), false);
+
     }
 }
