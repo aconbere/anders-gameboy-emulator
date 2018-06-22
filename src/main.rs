@@ -4,6 +4,7 @@ mod bytes;
 mod registers;
 mod instructions;
 mod cpu;
+mod gpu;
 mod mmu;
 mod device;
 mod display;
@@ -15,7 +16,7 @@ fn main() {
     let mut mmu = mmu::new();
 
     let mut cpu = cpu::new();
-    let mut gpu = device::gpu::new();
+    let mut gpu = gpu::new();
 
     loop {
         let m = &mut mmu;

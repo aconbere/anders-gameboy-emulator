@@ -4,7 +4,6 @@ pub mod vram;
 pub mod hardware_io;
 pub mod cartridge;
 pub mod zero_page;
-pub mod gpu;
 pub mod interrupt;
 pub mod ram_bank;
 
