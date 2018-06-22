@@ -130,22 +130,25 @@ fn jump_relative(registers: &mut registers::Registers, v:i8) {
 
 fn compare(
     registers:&mut registers::Registers, 
-    mmu:&mut mmu::MMU,
     v:u8
 ) {
     let a = registers.get8(&registers::Registers8::A);
 
     println!("\tCompare: A {:X} to V {:X}", a, v);
+    let n = a.wrapping_sub(v);
+
+    if n == 0 {
+        println!("Compare: ZERO");
+    }
 
     registers.set_flag(registers::Flag::N, true);
-    registers.set_flag(registers::Flag::Z, a == v);
+    registers.set_flag(registers::Flag::Z, n == 0);
     registers.set_flag(registers::Flag::H, (0x0F & v) > (0x0F & a));
-    registers.set_flag(registers::Flag::C, v > a);
+    registers.set_flag(registers::Flag::C, a < v);
 }
 
 fn sub(
     registers: &mut registers::Registers,
-    mmu: &mut mmu::MMU,
     v:u8
 ) {
     let a = registers.get8(&registers::Registers8::A);
@@ -160,7 +163,6 @@ fn sub(
 
 fn add(
     registers: &mut registers::Registers,
-    mmu: &mut mmu::MMU,
     v:u8
 ) {
     let a = registers.get8(&registers::Registers8::A);
@@ -352,18 +354,18 @@ impl Op {
             Op::JR(JrArgs::CheckFlag(f)) => {
                 let check = match f {
                     CheckFlag::Z => registers.get_flag(registers::Flag::Z),
-                    CheckFlag::NZ => !registers.get_flag(registers::Flag::Z),
+                    CheckFlag::NZ => registers.get_flag(registers::Flag::Z),
                     CheckFlag::C => registers.get_flag(registers::Flag::C),
-                    CheckFlag::NC => !registers.get_flag(registers::Flag::C),
+                    CheckFlag::NC => registers.get_flag(registers::Flag::C),
                 };
 
                 if check {
-                    println!("JR: Check {:?} passed jumping", f);
+                    println!("JR: Check {:?} true continuing", f);
+                    12
+                } else {
+                    println!("JR: Check {:?} false jumping", f);
                     jump_relative(registers, args[0] as i8);
                     16
-                } else {
-                    println!("JR: Check {:?} failed continuing", f);
-                    12
                 }
             },
             Op::JR(JrArgs::N) => {
@@ -504,14 +506,14 @@ impl Op {
             Op::Dec16(_) => panic!("Not Implemented"),
 
             Op::Compare(Source8::N) => {
-                compare(registers, mmu, args[0]);
+                compare(registers, args[0]);
                 8
             },
             Op::Compare(Source8::R(_)) => panic!("Not Implemented"),
             Op::Compare(Source8::Mem(r)) => {
                 let m = registers.get16(r);
                 let v = mmu.get(m);
-                compare(registers, mmu, v);
+                compare(registers, v);
                 8
             },
             Op::XOR(Destination8::R(r)) => {
@@ -530,25 +532,25 @@ impl Op {
             Op::XOR(Destination8::Mem(_)) => panic!("Not Implemented"),
             Op::Sub(Destination8::R(r)) => {
                 let v = registers.get8(r);
-                sub(registers, mmu, v);
+                sub(registers, v);
                 4
             },
             Op::Sub(Destination8::Mem(r)) => {
                 let m = registers.get16(r);
                 let v = mmu.get(m);
-                sub(registers, mmu, v);
+                sub(registers, v);
                 8
             },
 
             Op::Add(Destination8::R(r)) => {
                 let v = registers.get8(r);
-                add(registers, mmu, v);
+                add(registers, v);
                 4
             },
             Op::Add(Destination8::Mem(r)) => {
                 let m = registers.get16(r);
                 let v = mmu.get(m);
-                add(registers, mmu, v);
+                add(registers, v);
                 8
             },
 

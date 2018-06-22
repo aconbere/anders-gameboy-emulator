@@ -3,11 +3,11 @@ use std::io::Read;
 
 use device::Device;
 
-pub struct Cartridge {
-    pub storage: [u8;32512]
+pub struct BootRom {
+    pub storage: [u8;256]
 }
 
-impl Device for Cartridge {
+impl Device for BootRom {
     fn get(&self, a:u16) -> u8 {
         self.storage[a as usize]
     }
@@ -17,9 +17,10 @@ impl Device for Cartridge {
     }
 }
 
-pub fn load_from_file(filename:String) -> Cartridge {
+pub fn load_from_file(filename:String) -> BootRom {
     let mut f = File::open(filename).unwrap();
-    let mut c = Cartridge { storage: [0;32512] };
+    // let mut buf=[0u8;16384];
+    let mut c = BootRom { storage: [0;256] };
     f.read(&mut c.storage).unwrap();
     c
 }

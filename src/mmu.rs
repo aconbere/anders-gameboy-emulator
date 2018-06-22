@@ -102,8 +102,12 @@ pub fn new() -> MMU {
         // String::from("/Users/anders/Projects/gb_test_roms/Mona_And_The_Witch_Hat.gb")
     );
 
+    let boot_rom = device::boot_rom::load_from_file(
+        String::from("/Users/anders/Projects/gb_test_roms/DMG_ROM.bin")
+    );
+
     MMU {
-        restart_and_interrupt: device::restart_and_interrupt::new(GBM_BOOT_ROM),
+        restart_and_interrupt: device::restart_and_interrupt::new(boot_rom),
         cartridge: cartridge,
         video_ram: device::vram::new(),
         cartridge_ram: device::not_implemented::NotImplemented{},

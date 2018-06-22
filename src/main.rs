@@ -24,7 +24,7 @@ fn main() {
 
         let cycles = cpu.tick(&instructions, r, m);
 
-        if m.hardware_io.get_lcd_control_flag(device::hardware_io::LCDControlFlag::LCDDisplayEnable) {
+        if m.hardware_io.lcd_control_register.get_flag(device::hardware_io::LCDControlFlag::LCDDisplayEnable) {
             gpu.tick(m, cycles);
         }
 
