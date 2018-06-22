@@ -642,7 +642,7 @@ pub fn new() -> Instructions {
     instructions[0x0020] = Op::JR(JrArgs::CheckFlag(CheckFlag::NZ));
     instructions[0x0021] = Op::Load16(Destination16::R(registers::Registers16::HL), Source16::N);
     instructions[0x0022] = Op::LoadAndInc;
-    instructions[0x0023] = Op::Inc8(Destination8::Mem(registers::Registers16::HL));
+    instructions[0x0023] = Op::Inc16(Destination16::R(registers::Registers16::HL));
     instructions[0x0024] = Op::Inc8(Destination8::R(registers::Registers8::H));
     instructions[0x0028] = Op::JR(JrArgs::CheckFlag(CheckFlag::Z));
     instructions[0x002E] = Op::Load8(Load8Args::R(registers::Registers8::L), Load8Args::N);

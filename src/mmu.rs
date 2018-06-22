@@ -27,7 +27,6 @@ pub static GBM_BOOT_ROM: [u8;256] = [
 
 
 pub struct MMU {
-    pub restart_and_interrupt: device::restart_and_interrupt::RestartAndInterrupt,
     pub cartridge: device::cartridge::Cartridge,
     pub video_ram: device::vram::VRam,
     pub cartridge_ram: device::not_implemented::NotImplemented,
@@ -52,9 +51,7 @@ impl MMU {
         let k = device::get_kind(address);
 
         match k {
-            device::Kind::RestartAndInterrupt => self.restart_and_interrupt.get(address),
-
-            device::Kind::CartridgeHeader | device::Kind::CartridgeROMBank0 | device::Kind::CartridgeROMBank1 =>
+            device::Kind::RestartAndInterrupt | device::Kind::CartridgeHeader | device::Kind::CartridgeROMBank0 | device::Kind::CartridgeROMBank1 =>
                 self.cartridge.get(address),
 
             device::Kind::CharacterRAM | device::Kind::BackgroundMapData1 | device::Kind::BackgroundMapData2 =>
@@ -76,8 +73,7 @@ impl MMU {
         let k = device::get_kind(address);
 
         match k {
-            device::Kind::RestartAndInterrupt => self.restart_and_interrupt.set(address, v),
-            device::Kind::CartridgeHeader | device::Kind::CartridgeROMBank0 | device::Kind::CartridgeROMBank1 =>
+            device::Kind::RestartAndInterrupt | device::Kind::CartridgeHeader | device::Kind::CartridgeROMBank0 | device::Kind::CartridgeROMBank1 =>
                 self.cartridge.set(address, v),
 
             device::Kind::CharacterRAM | device::Kind::BackgroundMapData1 | device::Kind::BackgroundMapData2 =>
@@ -97,18 +93,17 @@ impl MMU {
 }
 
 pub fn new() -> MMU {
-    let cartridge = device::cartridge::load_from_file(
+    let boot_rom = device::cartridge::load_boot_rom(
+        String::from("/Users/anders/Projects/gb_test_roms/DMG_ROM.bin")
+    );
+
+    let cartridge = device::cartridge::load_cartridge(
         String::from("/Users/anders/Projects/gb_test_roms/sheepitup.gb")
         // String::from("/Users/anders/Projects/gb_test_roms/Mona_And_The_Witch_Hat.gb")
     );
 
-    let boot_rom = device::boot_rom::load_from_file(
-        String::from("/Users/anders/Projects/gb_test_roms/DMG_ROM.bin")
-    );
-
     MMU {
-        restart_and_interrupt: device::restart_and_interrupt::new(boot_rom),
-        cartridge: cartridge,
+        cartridge: device::cartridge::new(boot_rom, cartridge),
         video_ram: device::vram::new(),
         cartridge_ram: device::not_implemented::NotImplemented{},
         internal_ram_bank_0: device::ram_bank::new(),
