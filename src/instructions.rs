@@ -614,9 +614,17 @@ pub fn new() -> Instructions {
     let mut instructions = vec![Op::NotImplemented;256];
 
     instructions[0x0000] = Op::NOP;
+    instructions[0x0002] = Op::Load16(Destination16::R(registers::Registers16::BC), Source16::N);
+    instructions[0x0002] = Op::Load8(Load8Args::Mem(registers::Registers16::BC), Load8Args::R(registers::Registers8::A));
+    instructions[0x0003] = Op::Inc16(Destination16::R(registers::Registers16::BC));
     instructions[0x0004] = Op::Inc8(Destination8::R(registers::Registers8::B));
     instructions[0x0005] = Op::Dec8(Destination8::R(registers::Registers8::B));
     instructions[0x0006] = Op::Load8(Load8Args::R(registers::Registers8::B), Load8Args::N);
+    // instructions[0x0007] = Op::RLCA
+    // instructions[0x0008] = Op::Load16(Destination16::N, Source16::R(registers::Registers16::SP);
+    // instructions[0x0009] = Op::Add(HL, BC);
+    // instructions[0x000A] = 
+    // instructions[0x000B] = 
     instructions[0x000C] = Op::Inc8(Destination8::R(registers::Registers8::C));
     instructions[0x000D] = Op::Dec8(Destination8::R(registers::Registers8::C));
     instructions[0x000E] = Op::Load8(Load8Args::R(registers::Registers8::C), Load8Args::N);
@@ -638,7 +646,7 @@ pub fn new() -> Instructions {
     instructions[0x002E] = Op::Load8(Load8Args::R(registers::Registers8::L), Load8Args::N);
     instructions[0x0031] = Op::Load16(Destination16::R(registers::Registers16::SP), Source16::N);
     instructions[0x0032] = Op::LoadAndDec;
-    instructions[0x003D] = Op::Dec8(Destination8::R(registers::Registers8::D));
+    instructions[0x003D] = Op::Dec8(Destination8::R(registers::Registers8::A));
     instructions[0x003E] = Op::Load8(Load8Args::R(registers::Registers8::A), Load8Args::N);
     instructions[0x004F] = Op::Load8(Load8Args::R(registers::Registers8::C), Load8Args::R(registers::Registers8::A));
     instructions[0x0057] = Op::Load8(Load8Args::R(registers::Registers8::D), Load8Args::R(registers::Registers8::A));

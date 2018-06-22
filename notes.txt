@@ -1,0 +1,10 @@
+Next:
+
+Infinite loop is happening because the vblank interrupt isn't being handled
+
+
+0x0064 – LD A, ($0xFF00+$44) # wait for vertical-blank period
+0x0066 – CP $0x90 # value at 0xFF44 used to determine vertical-blank period
+0x0068 – JRNZ .+0xfa # jump to 0x0064 (loop) if not at vertical-blank period
+
+```0xFF44: Y-Coordinate (R) This register indicates the current vertical line that has data transferred to the LCD Driver. This register can take on any value between 0 through 153 (0x00-0x99). The values between 144 and 153 (0x90-0x99) indicate the V-Blank period where the display rests finishes a full refresh. Any writing to this register will reset the counter.```
