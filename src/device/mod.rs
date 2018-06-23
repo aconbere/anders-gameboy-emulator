@@ -33,9 +33,9 @@ pub fn get_kind(address:u16) -> Kind {
         0x0000...0x00FF => Kind::RestartAndInterrupt,
 
         // Cartridge
-        0x0100...0x014F => Kind::CartridgeHeader,
-        0x0150...0x3FFF => Kind::CartridgeROMBank0,
-        0x4000...0x7FFF => Kind::CartridgeROMBank1,
+        0x00FF...0x014F => Kind::CartridgeHeader,
+        0x014F...0x3FFF => Kind::CartridgeROMBank0,
+        0x3FFF...0x7FFF => Kind::CartridgeROMBank1,
 
         // video ram
         0x8000...0x97FF => Kind::CharacterRAM,

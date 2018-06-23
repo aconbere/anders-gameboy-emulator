@@ -3,7 +3,8 @@ use std::io::Read;
 
 use device::Device;
 
-enum States {
+#[derive(Debug)]
+pub enum States {
     Booting,
     Running,
 }
@@ -24,7 +25,10 @@ impl Device for Cartridge {
                     self.cartridge[a as usize]
                 }
             },
-            States::Running => self.cartridge[a as usize],
+            States::Running => {
+                let v = self.cartridge[a as usize];
+                v
+            }
         }
     }
 
@@ -39,6 +43,12 @@ impl Device for Cartridge {
             }
             States::Running => self.cartridge[a as usize] = v,
         }
+    }
+}
+
+impl Cartridge {
+    pub fn set_state(&mut self, state:States) {
+        self.state = state;
     }
 }
 
