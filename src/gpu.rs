@@ -1,5 +1,6 @@
 use mmu;
 
+#[derive(PartialEq)]
 pub enum Mode {
     OAM,
     VRAM,
@@ -9,17 +10,23 @@ pub enum Mode {
 
 pub struct GPU {
     mode_clock: u32,
-    mode: Mode,
+    frame_available: bool,
+    pub mode: Mode,
 }
 
 pub fn new() -> GPU {
     GPU {
         mode_clock: 0,
         mode: Mode::OAM,
+        frame_available: false,
     }
 }
 
 impl GPU {
+    pub fn new_frame_available(&self) -> bool {
+        self.frame_available
+    }
+
     pub fn tick(&mut self, mmu:&mut mmu::MMU, cycles:u8) {
         self.mode_clock += cycles as u32;
 
@@ -44,6 +51,7 @@ impl GPU {
                     mmu.hardware_io.lcd_line_count.inc();
 
                     if mmu.hardware_io.lcd_line_count.get() == 144 {
+                        self.frame_available = true;
                         self.mode = Mode::VBlank;
                     } else {
                         self.mode = Mode::OAM;
@@ -52,6 +60,8 @@ impl GPU {
             },
             Mode::VBlank => {
                 println!("GPU: VBLANK Mode");
+                self.frame_available = false;
+
                 if self.mode_clock >= 456 {
                     self.mode_clock -= 456;
                     mmu.hardware_io.lcd_line_count.inc();

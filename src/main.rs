@@ -8,32 +8,12 @@ mod gpu;
 mod mmu;
 mod device;
 mod display;
+mod gameboy;
 
 fn main() {
-    let mut registers = registers::new();
-    let instructions = instructions::new();
-
-    let mut mmu = mmu::new();
-
-    let mut cpu = cpu::new();
-    let mut gpu = gpu::new();
+    let mut gameboy = gameboy::new();
 
     loop {
-        let m = &mut mmu;
-        let r = &mut registers;
-
-        let cycles = cpu.tick(&instructions, r, m);
-
-        if m.hardware_io.lcd_control_register.get_flag(device::hardware_io::LCDControlFlag::LCDDisplayEnable) {
-            gpu.tick(m, cycles);
-        }
-
-        if r.get_interrupts_enabled() {
-            let requested = m.hardware_io.get_requested_interrupts();
-            let enabled = m.interrupt_enable.get_enabled_interrupts();
-            for i in device::interrupt::flags(enabled, requested) {
-                println!("Saw interrupt: {:?}", i);
-            }
-        }
+        gameboy.next_frame();
     }
 }

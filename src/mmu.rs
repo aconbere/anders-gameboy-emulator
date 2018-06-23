@@ -69,7 +69,6 @@ impl MMU {
             device::Kind::HardwareIORegisters => {
                 match address {
                     0xFF50 => {
-                        println!("SETTING CARTRIDGE STATE");
                         self.cartridge.set_state(device::cartridge::States::Running)
                     },
                     _ => self.hardware_io.set(address - 0xFF00, v)
@@ -90,8 +89,6 @@ pub fn new() -> MMU {
         // String::from("/Users/anders/Projects/gb_test_roms/sheepitup.gb")
         String::from("/Users/anders/Projects/gb_test_roms/Mona_And_The_Witch_Hat.gb")
     );
-
-    println!("STARTING: {:X}", cartridge[256]);
 
     MMU {
         cartridge: device::cartridge::new(boot_rom, cartridge),

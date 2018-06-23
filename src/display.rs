@@ -2,20 +2,11 @@ use std::thread;
 
 use sdl2;
 use sdl2::event::Event;
-use sdl2::video::Window;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 
-trait Display { }
-
-pub struct SDL {
-    canvas: sdl2::render::Canvas<Window>
-}
-
-impl Display for SDL { }
-
-pub fn start() {
+pub fn start(framebuffer: [u8;23040]) {
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
     let window = video_subsystem.window("rust-sdl2 demo: Cursor", 800, 600)

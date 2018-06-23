@@ -1,12 +1,10 @@
 pub mod not_implemented;
-pub mod restart_and_interrupt;
 pub mod vram;
 pub mod hardware_io;
 pub mod cartridge;
 pub mod zero_page;
 pub mod interrupt;
 pub mod ram_bank;
-pub mod boot_rom;
 
 #[derive(Debug)]
 pub enum Kind {
