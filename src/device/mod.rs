@@ -12,9 +12,10 @@ pub enum Kind {
     CartridgeHeader,
     CartridgeROMBank0,
     CartridgeROMBank1,
-    CharacterRAM,
-    BackgroundMapData1,
-    BackgroundMapData2,
+    TileMap1,
+    TileMap2,
+    TileData1,
+    TileData2,
     CartridgeRAM,
     InternalRAMBank0,
     InternalRAMBank1,
@@ -36,9 +37,10 @@ pub fn get_kind(address:u16) -> Kind {
         0x3FFF...0x7FFF => Kind::CartridgeROMBank1,
 
         // video ram
-        0x8000...0x97FF => Kind::CharacterRAM,
-        0x9800...0x9BFF => Kind::BackgroundMapData1,
-        0x9C00...0x9FFF => Kind::BackgroundMapData2,
+        0x8000...0x8FFF => Kind::TileData1,
+        0x8800...0x97FF => Kind::TileData2,
+        0x9800...0x9BFF => Kind::TileMap1,
+        0x9C00...0x9FFF => Kind::TileMap2,
 
         0xA000...0xBFFF => Kind::CartridgeRAM,
 

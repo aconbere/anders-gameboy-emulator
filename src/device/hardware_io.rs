@@ -1,12 +1,72 @@
 use device::Device;
 use bytes;
 
+#[derive(Debug, Clone, Copy)]
+pub enum Shade {
+    White,
+    LightGrey,
+    DarkGrey,
+    Black
+}
+
+/* A palette defines how to take tile data and turn it into
+ * the color space of the gameboy (four shades). A palette
+ * is broken into four, two bit segments
+ *
+ * [ 0-1, 2-3, 4-5, 6-7]
+ *
+ * each of those two bit segments can represent a shade [0-3]
+ * between white and black.
+ */
+pub struct Palette {
+    storage: u8
+}
+
+pub fn get_shade(i:u8) -> Shade {
+    match i {
+        0 => Shade::White,
+        1 => Shade::LightGrey,
+        2 => Shade::DarkGrey,
+        3 => Shade::Black,
+        _ => panic!("invalid shade index"),
+    }
+}
+
+impl Palette {
+    pub fn get(&self) -> u8 {
+        self.storage
+    }
+
+    pub fn set(&mut self, v:u8) {
+        self.storage = v
+    }
+
+    pub fn get_shades(&self) -> [Shade;4] {
+        let mask = 0x03;
+
+        /* we take our mask 00000011 in binary and we check what the value is
+         * at for those bits in storage. Then we shift the mask over to check
+         * the next two bytes, and shift the result back to get back to the
+         * numeric result
+         */
+        return [
+            get_shade(self.storage & mask),
+            get_shade((self.storage & (mask << 2)) >> 2),
+            get_shade((self.storage & (mask << 4)) >> 4),
+            get_shade((self.storage & (mask << 6)) >> 6),
+        ]
+    }
+}
+
+
+
 pub enum LCDControlFlag {
     LCDDisplayEnable,
-    WindowTileMapDisplaySelect,
+    WindowTileSelect,
     WindowDisplayEnable,
-    BackgroundAndWindowTileDataSelect,
-    BGTileMapDisplaySelect,
+    /* There are two Tile Data tables at $8000-8FFF and at $8800-97FF. The first one can be used for sprites and the background. Its tiles are numbered from 0 to 255. The second table can be used for the background and the window display and its tiles are numbered from -128 to 127 */
+    TileDataSelect,
+    TileMapSelect,
     ObjectSize,
     ObjectDisplayEnable,
     BackgroundDisplay,
@@ -16,10 +76,10 @@ impl LCDControlFlag {
     pub fn get_index(&self) -> u8 {
         match self {
             LCDControlFlag::LCDDisplayEnable => 7,
-            LCDControlFlag::WindowTileMapDisplaySelect => 6,
+            LCDControlFlag::WindowTileSelect => 6,
             LCDControlFlag::WindowDisplayEnable => 5,
-            LCDControlFlag::BackgroundAndWindowTileDataSelect => 4,
-            LCDControlFlag::BGTileMapDisplaySelect => 3,
+            LCDControlFlag::TileDataSelect => 4,
+            LCDControlFlag::TileMapSelect => 3,
             LCDControlFlag::ObjectSize => 2,
             LCDControlFlag::ObjectDisplayEnable => 1,
             LCDControlFlag::BackgroundDisplay => 0,
@@ -145,6 +205,13 @@ pub struct HardwareIO {
     pub lcd_control_register: LCDControlRegister,
     pub lcd_status_register: LCDStatusRegister,
     pub lcd_line_count: LCDLineCount,
+    pub background_palette: Palette,
+    pub object_palette_1: Palette,
+    pub object_palette_2: Palette,
+    pub lcd_scroll_position_y: u8,
+    pub lcd_scroll_position_x: u8,
+    pub window_position_y: u8,
+    pub window_position_x: u8,
     pub storage: [u8; 128],
 }
 
@@ -153,6 +220,16 @@ pub fn new() -> HardwareIO {
         lcd_control_register: LCDControlRegister{storage: 0},
         lcd_status_register: LCDStatusRegister{storage: 0},
         lcd_line_count: LCDLineCount{storage: 0},
+        background_palette: Palette{storage: 0},
+        object_palette_1: Palette{storage: 0},
+        object_palette_2: Palette{storage: 0},
+        /* scroll x,y define the position inside of the 256/256 background map that 
+         * the screen is displaying in
+        * */
+        lcd_scroll_position_y: 0,
+        lcd_scroll_position_x: 0,
+        window_position_y: 0,
+        window_position_x: 0,
         storage: [0;128],
     }
 }
@@ -162,7 +239,18 @@ impl Device for HardwareIO {
         match a {
             0x0040 => self.lcd_control_register.get(),
             0x0041 => self.lcd_status_register.get(),
+            0x0042 => self.lcd_scroll_position_y,
+            0x0043 => self.lcd_scroll_position_x,
             0x0044 => self.lcd_line_count.get(),
+            0x0047 => self.background_palette.get(),
+            0x0048 => self.object_palette_1.get(),
+            0x0049 => self.object_palette_2.get(),
+            0x004A => {
+                self.window_position_y
+            },
+            0x004B => {
+                self.window_position_x
+            },
             _ => self.storage[a as usize],
         }
     }
@@ -171,7 +259,28 @@ impl Device for HardwareIO {
         match a {
             0x0040 => self.lcd_control_register.set(v),
             0x0041 => self.lcd_status_register.set(v),
+            0x0042 => {
+                self.lcd_scroll_position_y = v
+            },
+            0x0043 => {
+                self.lcd_scroll_position_x = v
+            },
             0x0044 => panic!("lcd line count is R/O"),
+            0x0047 => {
+                self.background_palette.set(v)
+            },
+            0x0048 => {
+                self.object_palette_1.set(v)
+            },
+            0x0049 => {
+                self.object_palette_2.set(v)
+            },
+            0x004A => {
+                self.window_position_y = v
+            },
+            0x004B => {
+                self.window_position_x = v
+            },
             _ => self.storage[a as usize] = v,
         }
     }

@@ -8,7 +8,10 @@ use device::Device;
 
 pub struct MMU {
     pub cartridge: device::cartridge::Cartridge,
-    pub video_ram: device::vram::VRam,
+    pub tile_map_1: device::vram::TileMap,
+    pub tile_map_2: device::vram::TileMap,
+    pub tile_data_1: device::vram::TileData,
+    pub tile_data_2: device::vram::TileData,
     pub cartridge_ram: device::not_implemented::NotImplemented,
     pub internal_ram_bank_0: device::ram_bank::RamBank,
     pub internal_ram_bank_1: device::ram_bank::RamBank,
@@ -35,8 +38,10 @@ impl MMU {
                 self.cartridge.get(address)
             },
 
-            device::Kind::CharacterRAM | device::Kind::BackgroundMapData1 | device::Kind::BackgroundMapData2 =>
-                self.video_ram.get(address - 0x8000),
+            device::Kind::TileMap1 => self.tile_map_1.get(address - 0x8000),
+            device::Kind::TileMap2 => self.tile_map_2.get(address - 0x8800),
+            device::Kind::TileData1 => self.tile_data_1.get(address - 0x9800),
+            device::Kind::TileData2 => self.tile_data_2.get(address - 0x9C00),
 
             device::Kind::CartridgeRAM => self.cartridge_ram.get(address),
             device::Kind::InternalRAMBank0 => self.internal_ram_bank_0.get(address),
@@ -57,8 +62,10 @@ impl MMU {
             device::Kind::RestartAndInterrupt | device::Kind::CartridgeHeader | device::Kind::CartridgeROMBank0 | device::Kind::CartridgeROMBank1 =>
                 self.cartridge.set(address, v),
 
-            device::Kind::CharacterRAM | device::Kind::BackgroundMapData1 | device::Kind::BackgroundMapData2 =>
-                self.video_ram.set(address - 0x8000, v),
+            device::Kind::TileMap1 => self.tile_map_1.set(address - 0x8000, v),
+            device::Kind::TileMap2 => self.tile_map_2.set(address - 0x8800, v),
+            device::Kind::TileData1 => self.tile_data_1.set(address - 0x9800, v),
+            device::Kind::TileData2 => self.tile_data_2.set(address - 0x9C00, v),
 
             device::Kind::CartridgeRAM => self.cartridge_ram.set(address, v),
             device::Kind::InternalRAMBank0 => self.internal_ram_bank_0.set(address - 0xC000, v),
@@ -92,7 +99,10 @@ pub fn new() -> MMU {
 
     MMU {
         cartridge: device::cartridge::new(boot_rom, cartridge),
-        video_ram: device::vram::new(),
+        tile_map_1: device::vram::new_tile_map(),
+        tile_map_2: device::vram::new_tile_map(),
+        tile_data_1: device::vram::new_tile_data(),
+        tile_data_2: device::vram::new_tile_data(),
         cartridge_ram: device::not_implemented::NotImplemented{},
         internal_ram_bank_0: device::ram_bank::new(),
         internal_ram_bank_1: device::ram_bank::new(),
