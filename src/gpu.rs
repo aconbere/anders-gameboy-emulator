@@ -1,6 +1,7 @@
 use mmu;
 use device;
 use device::hardware_io::LCDControlFlag;
+use std;
 
 #[derive(PartialEq)]
 pub enum Mode {
@@ -24,13 +25,28 @@ pub fn new() -> GPU {
     }
 }
 
-fn render_line(mmu: &mmu::MMU) -> [device::hardware_io::Shade;160] {
+pub struct Line {
+    storage: [device::hardware_io::Shade;160]
+}
+
+impl std::fmt::Display for Line {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "Line: [");
+        for i in self.storage.iter() {
+            write!(f, "{:?},", i);
+        }
+        write!(f, "]")
+    }
+}
+
+fn render_line(mmu: &mmu::MMU) -> Line {
+    println!("RENDERING LINE");
     // get our y-offset, this wont change per scan line
     let y_offset = mmu.hardware_io.lcd_line_count.get() + mmu.hardware_io.lcd_scroll_position_y;
 
     /* Fetch the currently active palette
      */
-    let pallet = mmu.hardware_io.background_palette.get_shades();
+    // let pallet = mmu.hardware_io.background_palette.get_shades();
 
     let mut line:[device::hardware_io::Shade;160] = [device::hardware_io::Shade::White;160];
 
@@ -53,36 +69,53 @@ fn render_line(mmu: &mmu::MMU) -> [device::hardware_io::Shade;160] {
          * which tile it would be
          */
         let x_offset = mmu.hardware_io.lcd_scroll_position_x + i;
+        // println!("Pixel: {} X: {} Y: {}", i, x_offset, y_offset);
 
-        /* The first tile in a line might start at any pixel in the tile from 0 to 8
-         * later tiles will always start at 0
+        // /* This block determines which tile we are on in the 32x32 grid.
+        let tile_index_y = y_offset / 8;
+        let tile_index_x = x_offset / 8;
+
+        // println!("Tile Index: {}, {}", tile_index_x, tile_index_y);
+
+        let tile_map_select = mmu.hardware_io.lcd_control_register.get_flag(LCDControlFlag::TileMapSelect);
+        let tile_data_select = mmu.hardware_io.lcd_control_register.get_flag(LCDControlFlag::TileDataSelect);
+
+        /* Figure out where to to find the data in the tile map index
          */
-        let tile_index_y = (y_offset / 32) + (y_offset % 32);
-        let tile_index_x = if i == 0 {
-            (x_offset / 32) + (x_offset % 32)
+        // NOTE: I'm decrementing index_y by 1 by I don't know why
+        let tile_map_index:u16 = ((tile_index_y as u16) * 32) + (tile_index_x / 32) as u16;
+        // println!("Tile Map Index: {}", tile_map_index);
+
+        let tile_data_index = if tile_map_select {
+            mmu.tile_map_1.get(tile_map_index)
         } else {
-            0
+            mmu.tile_map_2.get(tile_map_index)
         };
 
-
-        /* to get where in the tile data to look, first we firgure out which tile map is enabled.
-         * then we look up there to find the data in the tile map index
-         */
-        let tile_map_index = (y_offset * 32) + (x_offset / 32);
-        let tile_data_index = if mmu.hardware_io.lcd_control_register.get_flag(LCDControlFlag::TileMapSelect) {
-            mmu.tile_map_1.get(tile_map_index);
-        } else {
-            mmu.tile_map_2.get(tile_map_index);
-        };
+        // println!("Tile Data Index: {}", tile_data_index);
 
         /* We check what tile data set is enabled and use the tile data index found previously to
          * fetch a tile.
          */
-        let tile_data = if mmu.hardware_io.lcd_control_register.get_flag(LCDControlFlag::TileDataSelect) {
-            mmu.tile_data_1.get_tile(tile_data_index);
+        let tile_data = if tile_data_select {
+            mmu.tile_data_1.get_tile(tile_data_index)
         } else {
-            mmu.tile_data_2.get_tile(tile_data_index);
+            mmu.tile_data_2.get_tile(tile_data_index)
         };
+
+        // println!("Tile Data: {:?}", tile_data);
+
+        /* Once we have the tile we need to know which pixel we're on in the pixel
+         * in the x direction if we are on i = 0 then we need to take the x_offset and
+         * get the remainder from 8.
+         */
+        let pixel_index_x = if i == 0 {
+            x_offset % 8
+        } else {
+            0
+        };
+
+        let pixel_index_y = y_offset % 8;
 
         /* Once we have a tile, we need to actually index into the tile at the right location
          */
@@ -91,8 +124,9 @@ fn render_line(mmu: &mmu::MMU) -> [device::hardware_io::Shade;160] {
          *
          * that are then mapped through a pallet
          */
-        for tx in tile_index_x..8 {
-            let pixel = tile_data.get_pixel(tx, tile_index_y);
+        for px in pixel_index_x..8 {
+            // println!("Render Tile: {}", px);
+            let pixel = tile_data.get_pixel(px, pixel_index_y);
             // get the pallet for the tile
             // render the RGB values into a struct
             line[i as usize] = device::hardware_io::get_shade(pixel);
@@ -100,7 +134,7 @@ fn render_line(mmu: &mmu::MMU) -> [device::hardware_io::Shade;160] {
         }
     }
 
-    return line;
+    Line{storage:line}
 }
 
 impl GPU {
@@ -110,7 +144,7 @@ impl GPU {
 
     pub fn tick(&mut self, mmu:&mut mmu::MMU, cycles:u8) {
         self.mode_clock += cycles as u32;
-        let framebuffer = [0;184320];
+        // let framebuffer = [0;184320];
 
         match self.mode {
             Mode::OAM => {
@@ -123,7 +157,7 @@ impl GPU {
                 println!("GPU: VRAM Mode");
                 if self.mode_clock >= 252 {
                     let line = render_line(&*mmu);
-                    println!("LINE: {:?}", line);
+                    println!("LINE: {}", line);
                     self.mode = Mode::HBlank;
                 }
             },

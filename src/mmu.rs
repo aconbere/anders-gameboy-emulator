@@ -31,17 +31,19 @@ impl MMU {
     }
 
     pub fn get(&self, address:u16) -> u8 {
+        println!("MMU: Reading: {:X}", address);
         let k = device::get_kind(address);
+        println!("MMU: Found Device: {:?}", k);
 
         match k {
             device::Kind::RestartAndInterrupt | device::Kind::CartridgeHeader | device::Kind::CartridgeROMBank0 | device::Kind::CartridgeROMBank1 => {
                 self.cartridge.get(address)
             },
 
-            device::Kind::TileMap1 => self.tile_map_1.get(address - 0x8000),
-            device::Kind::TileMap2 => self.tile_map_2.get(address - 0x8800),
-            device::Kind::TileData1 => self.tile_data_1.get(address - 0x9800),
-            device::Kind::TileData2 => self.tile_data_2.get(address - 0x9C00),
+            device::Kind::TileData1 => self.tile_data_1.get(address - 0x8000),
+            device::Kind::TileData2 => self.tile_data_2.get(address - 0x8800),
+            device::Kind::TileMap1 => self.tile_map_1.get(address - 0x9800),
+            device::Kind::TileMap2 => self.tile_map_2.get(address - 0x9C00),
 
             device::Kind::CartridgeRAM => self.cartridge_ram.get(address),
             device::Kind::InternalRAMBank0 => self.internal_ram_bank_0.get(address),
@@ -56,16 +58,18 @@ impl MMU {
     }
 
     pub fn set(&mut self, address:u16, v:u8) {
+        println!("MMU: Writing: {:X}", address);
         let k = device::get_kind(address);
+        println!("MMU: Found Device: {:?}", k);
 
         match k {
             device::Kind::RestartAndInterrupt | device::Kind::CartridgeHeader | device::Kind::CartridgeROMBank0 | device::Kind::CartridgeROMBank1 =>
                 self.cartridge.set(address, v),
 
-            device::Kind::TileMap1 => self.tile_map_1.set(address - 0x8000, v),
-            device::Kind::TileMap2 => self.tile_map_2.set(address - 0x8800, v),
-            device::Kind::TileData1 => self.tile_data_1.set(address - 0x9800, v),
-            device::Kind::TileData2 => self.tile_data_2.set(address - 0x9C00, v),
+            device::Kind::TileData1 => self.tile_data_1.set(address - 0x8000, v),
+            device::Kind::TileData2 => self.tile_data_2.set(address - 0x8800, v),
+            device::Kind::TileMap1 => self.tile_map_1.set(address - 0x9800, v),
+            device::Kind::TileMap2 => self.tile_map_2.set(address - 0x9C00, v),
 
             device::Kind::CartridgeRAM => self.cartridge_ram.set(address, v),
             device::Kind::InternalRAMBank0 => self.internal_ram_bank_0.set(address - 0xC000, v),

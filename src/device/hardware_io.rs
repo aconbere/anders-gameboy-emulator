@@ -1,5 +1,6 @@
 use device::Device;
 use bytes;
+use std;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Shade {
@@ -21,6 +22,7 @@ pub enum Shade {
 pub struct Palette {
     storage: u8
 }
+
 
 pub fn get_shade(i:u8) -> Shade {
     match i {
@@ -236,6 +238,7 @@ pub fn new() -> HardwareIO {
 
 impl Device for HardwareIO {
     fn get(&self, a:u16) -> u8 {
+        println!("HardwareIO: Fetching: {:X}", a);
         match a {
             0x0040 => self.lcd_control_register.get(),
             0x0041 => self.lcd_status_register.get(),
