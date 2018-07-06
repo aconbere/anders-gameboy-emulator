@@ -3,9 +3,8 @@ use mmu;
 use cpu;
 use gpu;
 use instructions;
+use framebuffer;
 use device;
-
-use std::{thread, time};
 
 pub struct Gameboy {
     registers: registers::Registers,
@@ -16,7 +15,7 @@ pub struct Gameboy {
 }
 
 impl Gameboy {
-    pub fn next_frame(&mut self) {
+    pub fn next_frame(&mut self, framebuffer:&mut framebuffer::Framebuffer) {
         loop {
             let m = &mut self.mmu;
             let r = &mut self.registers;
@@ -24,7 +23,7 @@ impl Gameboy {
             let cycles = self.cpu.tick(&self.instructions, r, m);
 
             if m.hardware_io.lcd_control_register.get_flag(device::hardware_io::LCDControlFlag::LCDDisplayEnable) {
-                self.gpu.tick(m, cycles);
+                self.gpu.tick(m, cycles, framebuffer);
             }
 
             if r.get_interrupts_enabled() {
@@ -34,9 +33,8 @@ impl Gameboy {
                     println!("Saw interrupt: {:?}", i);
                 }
             }
+
             if self.gpu.new_frame_available() {
-                println!("new frame available: sleeping");
-                thread::sleep(time::Duration::from_secs(1));
                 break;
             }
         }

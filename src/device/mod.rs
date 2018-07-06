@@ -37,6 +37,8 @@ pub fn get_kind(address:u16) -> Kind {
         0x3FFF...0x7FFF => Kind::CartridgeROMBank1,
 
         // video ram
+        // Because TileData is actually segmented into three sections with splits in between
+        // the two sections this probably needs to be a single device.
         0x8000...0x8FFF => Kind::TileData1,
         0x8800...0x97FF => Kind::TileData2,
         0x9800...0x9BFF => Kind::TileMap1,

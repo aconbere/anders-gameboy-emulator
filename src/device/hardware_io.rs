@@ -1,66 +1,6 @@
 use device::Device;
 use bytes;
-use std;
-
-#[derive(Debug, Clone, Copy)]
-pub enum Shade {
-    White,
-    LightGrey,
-    DarkGrey,
-    Black
-}
-
-/* A palette defines how to take tile data and turn it into
- * the color space of the gameboy (four shades). A palette
- * is broken into four, two bit segments
- *
- * [ 0-1, 2-3, 4-5, 6-7]
- *
- * each of those two bit segments can represent a shade [0-3]
- * between white and black.
- */
-pub struct Palette {
-    storage: u8
-}
-
-
-pub fn get_shade(i:u8) -> Shade {
-    match i {
-        0 => Shade::White,
-        1 => Shade::LightGrey,
-        2 => Shade::DarkGrey,
-        3 => Shade::Black,
-        _ => panic!("invalid shade index"),
-    }
-}
-
-impl Palette {
-    pub fn get(&self) -> u8 {
-        self.storage
-    }
-
-    pub fn set(&mut self, v:u8) {
-        self.storage = v
-    }
-
-    pub fn get_shades(&self) -> [Shade;4] {
-        let mask = 0x03;
-
-        /* we take our mask 00000011 in binary and we check what the value is
-         * at for those bits in storage. Then we shift the mask over to check
-         * the next two bytes, and shift the result back to get back to the
-         * numeric result
-         */
-        return [
-            get_shade(self.storage & mask),
-            get_shade((self.storage & (mask << 2)) >> 2),
-            get_shade((self.storage & (mask << 4)) >> 4),
-            get_shade((self.storage & (mask << 6)) >> 6),
-        ]
-    }
-}
-
-
+use palette;
 
 pub enum LCDControlFlag {
     LCDDisplayEnable,
@@ -192,7 +132,7 @@ impl LCDLineCount {
 
     pub fn inc(&mut self) {
         let n = self.storage + 1;
-        println!("new line!: {}", n);
+        // println!("new line!: {}", n);
         if n >= 154 {
             self.storage = 0;
         } else {
@@ -207,9 +147,9 @@ pub struct HardwareIO {
     pub lcd_control_register: LCDControlRegister,
     pub lcd_status_register: LCDStatusRegister,
     pub lcd_line_count: LCDLineCount,
-    pub background_palette: Palette,
-    pub object_palette_1: Palette,
-    pub object_palette_2: Palette,
+    pub background_palette: palette::Palette,
+    pub object_palette_1: palette::Palette,
+    pub object_palette_2: palette::Palette,
     pub lcd_scroll_position_y: u8,
     pub lcd_scroll_position_x: u8,
     pub window_position_y: u8,
@@ -222,9 +162,9 @@ pub fn new() -> HardwareIO {
         lcd_control_register: LCDControlRegister{storage: 0},
         lcd_status_register: LCDStatusRegister{storage: 0},
         lcd_line_count: LCDLineCount{storage: 0},
-        background_palette: Palette{storage: 0},
-        object_palette_1: Palette{storage: 0},
-        object_palette_2: Palette{storage: 0},
+        background_palette: palette::new(),
+        object_palette_1: palette::new(),
+        object_palette_2: palette::new(),
         /* scroll x,y define the position inside of the 256/256 background map that 
          * the screen is displaying in
         * */
@@ -238,7 +178,7 @@ pub fn new() -> HardwareIO {
 
 impl Device for HardwareIO {
     fn get(&self, a:u16) -> u8 {
-        println!("HardwareIO: Fetching: {:X}", a);
+        // println!("HardwareIO: Fetching: {:X}", a);
         match a {
             0x0040 => self.lcd_control_register.get(),
             0x0041 => self.lcd_status_register.get(),

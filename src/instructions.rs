@@ -125,7 +125,7 @@ fn jump_relative(registers: &mut registers::Registers, v:i8) {
     let pc = registers.get16(&registers::Registers16::PC);
     let out = bytes::add_unsigned_signed(pc, v);
     registers.set16(&registers::Registers16::PC, out);
-    println!("jump: PC=({}{})={}", pc, v, out);
+    // println!("jump: PC=({}{})={}", pc, v, out);
 }
 
 fn compare(
@@ -134,11 +134,11 @@ fn compare(
 ) {
     let a = registers.get8(&registers::Registers8::A);
 
-    println!("\tCompare: A {:X} to V {:X}", a, v);
+    // println!("\tCompare: A {:X} to V {:X}", a, v);
     let n = a.wrapping_sub(v);
 
     if n == 0 {
-        println!("Compare: ZERO");
+        // println!("Compare: ZERO");
     }
 
     registers.set_flag(registers::Flag::N, true);
@@ -270,7 +270,7 @@ impl Op {
             Op::Load8(Load8Args::R(r1), Load8Args::R(r2)) => {
                 let v = registers.get8(r2);
                 registers.set8(r1, v);
-                println!("Load8({:?}, {:?}) {:?}={:X}", r1, r2, r1, registers.get8(r1));
+                // println!("Load8({:?}, {:?}) {:?}={:X}", r1, r2, r1, registers.get8(r1));
                 4
             },
             Op::Load8(Load8Args::R(r1), Load8Args::N) => {
@@ -302,7 +302,7 @@ impl Op {
             Op::Load16(Destination16::R(r1), Source16::N) => {
                 let v = bytes::combine_little(args[0], args[1]);
                 registers.set16(r1, v);
-                println!("Load16({:?}) {:?}={:X}", r1, r1, v);
+                // println!("Load16({:?}) {:?}={:X}", r1, r1, v);
                 12
             },
             Op::Load16(Destination16::Mem(_), _) => {
@@ -314,7 +314,7 @@ impl Op {
             Op::LoadFF00(LoadFF00Targets::C, LoadFF00Targets::A)=> {
                 let c = registers.get8(&registers::Registers8::C) as u16;
                 let a = registers.get8(&registers::Registers8::A);
-                println!("Load FF00+{:X} with {:X}", c, a);
+                // println!("Load FF00+{:X} with {:X}", c, a);
                 mmu.set(c + 0xFF00, a);
                 8
             },
@@ -333,7 +333,7 @@ impl Op {
             Op::LoadFF00(LoadFF00Targets::N, LoadFF00Targets::A)=> {
                 let a = registers.get8(&registers::Registers8::A);
                 let ma = args[0] as u16;
-                println!("Load FF00+{:X} with {:X}", ma, a);
+                // println!("Load FF00+{:X} with {:X}", ma, a);
                 mmu.set(ma + 0xFF00, a);
                 8
             },
@@ -342,7 +342,7 @@ impl Op {
             Op::LoadAndDec => {
                 load_to_memory(registers, mmu, &registers::Registers16::HL, &registers::Registers8::A);
                 registers.dec_hl();
-                println!("LoadAndDec: HL={:X}", registers.get16(&registers::Registers16::HL));
+                // println!("LoadAndDec: HL={:X}", registers.get16(&registers::Registers16::HL));
                 8
             },
             Op::LoadAndInc => {
@@ -360,10 +360,10 @@ impl Op {
                 };
 
                 if check {
-                    println!("JR: Check {:?} true continuing", f);
+                    // println!("JR: Check {:?} true continuing", f);
                     12
                 } else {
-                    println!("JR: Check {:?} false jumping", f);
+                    // println!("JR: Check {:?} false jumping", f);
                     jump_relative(registers, args[0] as i8);
                     16
                 }
@@ -382,10 +382,10 @@ impl Op {
                 };
 
                 if check {
-                    println!("JP: flag set!");
+                    // println!("JP: flag set!");
                     12
                 } else {
-                    println!("JP: flag unset!");
+                    // println!("JP: flag unset!");
                     jump(registers, bytes::combine_little(args[0],args[1]));
                     16
                 }
@@ -404,11 +404,11 @@ impl Op {
             Op::Call(CallArgs::N) => {
                 push_stack(registers, mmu, &registers::Registers16::PC);
                 registers.set16(&registers::Registers16::PC, bytes::combine_little(args[0], args[1]));
-                println!(
-                    "Call - SP:{:X} PC{:X}",
-                    registers.get16(&registers::Registers16::SP),
-                    registers.get16(&registers::Registers16::PC)
-                );
+                // println!(
+                //     "Call - SP:{:X} PC{:X}",
+                //     registers.get16(&registers::Registers16::SP),
+                //     registers.get16(&registers::Registers16::PC)
+                // );
                 24
             },
             Op::Call(_) => panic!("Not Implemented"),
@@ -463,7 +463,7 @@ impl Op {
                 registers.set_flag(registers::Flag::H, v & 0x00FF == 0x00FF);
 
                 registers.set16(r, n);
-                println!("Inc16: Incrementing {:?} to {:X} - {:X}", r, n, registers.get16(r));
+                // println!("Inc16: Incrementing {:?} to {:X} - {:X}", r, n, registers.get16(r));
                 8
             },
             Op::Inc16(Destination16::Mem(_)) => panic!("Not Implemented"),
@@ -477,7 +477,7 @@ impl Op {
                 registers.set_flag(registers::Flag::H, v & 0x0F == 0x0F);
 
                 registers.set8(r, n);
-                println!("Dec8: Decrementing {:?} to {:X} -> {:X}", r, v, registers.get8(r));
+                // println!("Dec8: Decrementing {:?} to {:X} -> {:X}", r, v, registers.get8(r));
                 4
             },
             Op::Dec8(Destination8::Mem(r)) => {
@@ -561,7 +561,7 @@ impl Op {
             // Cb instructions
             Op::BIT(location, Destination8::R(r)) => {
                 let v = registers.get8(r);
-                println!("Bit: {}, {:b}", v, v);
+                // println!("Bit: {}, {:b}", v, v);
                 if bytes::check_bit(v, *location) {
                     registers.set_flag(registers::Flag::Z, false);
                 } else {
@@ -574,7 +574,7 @@ impl Op {
                 let v = registers.get8(r);
                 let c = registers.get_flag(registers::Flag::C);
 
-                println!("IN: {:b}", v);
+                // println!("IN: {:b}", v);
 
                 let out = if c {
                     (v << 1) | 0x0001
@@ -582,12 +582,12 @@ impl Op {
                     v << 1
                 };
 
-                println!("OUT: {:b}", out);
+                // println!("OUT: {:b}", out);
 
                 registers.set_flag(registers::Flag::C, bytes::check_bit(v, 7));
 
                 registers.set8(r, out);
-                println!("RL{:?}, {:?}={:X}, flags={:?}", r, r, registers.get8(r), registers.get_flag(registers::Flag::C));
+                // println!("RL{:?}, {:?}={:X}, flags={:?}", r, r, registers.get8(r), registers.get_flag(registers::Flag::C));
                 8
             }
             Op::RL(Destination8::Mem(_)) => panic!("Not Implemented"),

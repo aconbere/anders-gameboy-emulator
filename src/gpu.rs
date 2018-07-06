@@ -1,7 +1,7 @@
 use mmu;
-use device;
 use device::hardware_io::LCDControlFlag;
-use std;
+use palette;
+use framebuffer;
 
 #[derive(PartialEq)]
 pub enum Mode {
@@ -25,22 +25,8 @@ pub fn new() -> GPU {
     }
 }
 
-pub struct Line {
-    storage: [device::hardware_io::Shade;160]
-}
-
-impl std::fmt::Display for Line {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Line: [");
-        for i in self.storage.iter() {
-            write!(f, "{:?},", i);
-        }
-        write!(f, "]")
-    }
-}
-
-fn render_line(mmu: &mmu::MMU) -> Line {
-    println!("RENDERING LINE");
+fn render_line(mmu: &mmu::MMU, framebuffer:&mut framebuffer::Framebuffer) {
+    // println!("RENDERING LINE");
     // get our y-offset, this wont change per scan line
     let y_offset = mmu.hardware_io.lcd_line_count.get() + mmu.hardware_io.lcd_scroll_position_y;
 
@@ -48,7 +34,7 @@ fn render_line(mmu: &mmu::MMU) -> Line {
      */
     // let pallet = mmu.hardware_io.background_palette.get_shades();
 
-    let mut line:[device::hardware_io::Shade;160] = [device::hardware_io::Shade::White;160];
+    // let mut line:[palette::Shade;160] = [palette::Shade::White;160];
 
     let mut i = 0;
     // for each pixel in a line
@@ -75,21 +61,19 @@ fn render_line(mmu: &mmu::MMU) -> Line {
         let tile_index_y = y_offset / 8;
         let tile_index_x = x_offset / 8;
 
-        // println!("Tile Index: {}, {}", tile_index_x, tile_index_y);
+        println!("Tile Index: {}, {}", tile_index_x, tile_index_y);
 
         let tile_map_select = mmu.hardware_io.lcd_control_register.get_flag(LCDControlFlag::TileMapSelect);
         let tile_data_select = mmu.hardware_io.lcd_control_register.get_flag(LCDControlFlag::TileDataSelect);
 
-        /* Figure out where to to find the data in the tile map index
-         */
-        // NOTE: I'm decrementing index_y by 1 by I don't know why
-        let tile_map_index:u16 = ((tile_index_y as u16) * 32) + (tile_index_x / 32) as u16;
-        // println!("Tile Map Index: {}", tile_map_index);
+        /* Figure out where to to find the data in the tile map index */
+        let tile_map_index:u16 = (tile_index_y as u16 * 32) + tile_index_x as u16;
+        println!("Tile Map Index: {}", tile_map_index);
 
         let tile_data_index = if tile_map_select {
-            mmu.tile_map_1.get(tile_map_index)
-        } else {
             mmu.tile_map_2.get(tile_map_index)
+        } else {
+            mmu.tile_map_1.get(tile_map_index)
         };
 
         // println!("Tile Data Index: {}", tile_data_index);
@@ -98,9 +82,9 @@ fn render_line(mmu: &mmu::MMU) -> Line {
          * fetch a tile.
          */
         let tile_data = if tile_data_select {
-            mmu.tile_data_1.get_tile(tile_data_index)
-        } else {
             mmu.tile_data_2.get_tile(tile_data_index)
+        } else {
+            mmu.tile_data_1.get_tile(tile_data_index)
         };
 
         // println!("Tile Data: {:?}", tile_data);
@@ -124,17 +108,21 @@ fn render_line(mmu: &mmu::MMU) -> Line {
          *
          * that are then mapped through a pallet
          */
+        let palette = mmu.hardware_io.background_palette.get_shades();
+        // TODO Optimization
+        // Fetch the two bytes for the row here and then walk through with
+        // bit shifts to get the pixels.
         for px in pixel_index_x..8 {
             // println!("Render Tile: {}", px);
             let pixel = tile_data.get_pixel(px, pixel_index_y);
             // get the pallet for the tile
             // render the RGB values into a struct
-            line[i as usize] = device::hardware_io::get_shade(pixel);
+            // println!("Pixel: {}", pixel);
+            let frame_index = (mmu.hardware_io.lcd_scroll_position_y as u32 * 160) + i as u32; 
+            framebuffer[frame_index as usize] = palette::map_shade(&palette, pixel);
             i+=1;
         }
     }
-
-    Line{storage:line}
 }
 
 impl GPU {
@@ -142,27 +130,27 @@ impl GPU {
         self.frame_available
     }
 
-    pub fn tick(&mut self, mmu:&mut mmu::MMU, cycles:u8) {
+    pub fn tick(&mut self, mmu:&mut mmu::MMU, cycles:u8, framebuffer:&mut framebuffer::Framebuffer) {
         self.mode_clock += cycles as u32;
         // let framebuffer = [0;184320];
 
         match self.mode {
             Mode::OAM => {
-                println!("GPU: OAM Mode");
+                // println!("GPU: OAM Mode");
                 if self.mode_clock >= 80 {
                     self.mode = Mode::VRAM;
                 }
             },
             Mode::VRAM => {
-                println!("GPU: VRAM Mode");
+                // println!("GPU: VRAM Mode");
                 if self.mode_clock >= 252 {
-                    let line = render_line(&*mmu);
-                    println!("LINE: {}", line);
+                    render_line(&*mmu, framebuffer);
+                    // println!("LINE: {}", line);
                     self.mode = Mode::HBlank;
                 }
             },
             Mode::HBlank => {
-                println!("GPU: HBLANK Mode");
+                // println!("GPU: HBLANK Mode");
                 if self.mode_clock >= 456 {
                     self.mode_clock -= 456;
 
@@ -177,7 +165,7 @@ impl GPU {
                 }
             },
             Mode::VBlank => {
-                println!("GPU: VBLANK Mode");
+                // println!("GPU: VBLANK Mode");
                 self.frame_available = false;
 
                 if self.mode_clock >= 456 {
@@ -186,7 +174,7 @@ impl GPU {
                 }
 
                 if mmu.hardware_io.lcd_line_count.get() == 153 {
-                    println!("GPU: FRAME COMPLETE");
+                    // println!("GPU: FRAME COMPLETE");
                     self.mode = Mode::OAM;
                 }
             },

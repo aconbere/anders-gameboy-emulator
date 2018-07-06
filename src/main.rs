@@ -9,11 +9,11 @@ mod mmu;
 mod device;
 mod display;
 mod gameboy;
+mod palette;
+mod framebuffer;
 
 fn main() {
     let mut gameboy = gameboy::new();
 
-    loop {
-        gameboy.next_frame();
-    }
+    display::start(&mut gameboy);
 }
