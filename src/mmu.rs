@@ -31,9 +31,7 @@ impl MMU {
     }
 
     pub fn get(&self, address:u16) -> u8 {
-        // println!("MMU: Reading: {:X}", address);
         let k = device::get_kind(address);
-        // println!("MMU: Found Device: {:?}", k);
 
         match k {
             device::Kind::RestartAndInterrupt | device::Kind::CartridgeHeader | device::Kind::CartridgeROMBank0 | device::Kind::CartridgeROMBank1 => {
@@ -58,9 +56,7 @@ impl MMU {
     }
 
     pub fn set(&mut self, address:u16, v:u8) {
-        // println!("MMU: Writing: {:X}", address);
         let k = device::get_kind(address);
-        // println!("MMU: Found Device: {:?}", k);
 
         match k {
             device::Kind::RestartAndInterrupt | device::Kind::CartridgeHeader | device::Kind::CartridgeROMBank0 | device::Kind::CartridgeROMBank1 =>

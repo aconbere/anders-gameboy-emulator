@@ -14,6 +14,7 @@ mod framebuffer;
 
 fn main() {
     let mut gameboy = gameboy::new();
+    let mut display = display::new();
 
-    display::start(&mut gameboy);
+    display.start(&mut gameboy);
 }

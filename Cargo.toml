@@ -3,5 +3,7 @@ name = "gbx"
 version = "0.1.0"
 authors = ["Anders Conbere <anders@conbere.org>"]
 
-[dependencies]
-    sdl2 = "0.31"
+[dependencies.sdl2]
+  version = "0.31"
+  default-features = false
+  features = ["ttf"]
