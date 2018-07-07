@@ -12,7 +12,7 @@ pub fn get_shade(i:u8) -> Shade {
         1 => Shade::LightGrey,
         2 => Shade::DarkGrey,
         3 => Shade::Black,
-        _ => panic!("invalid shade index"),
+        _ => panic!("invalid shade index: {}", i),
     }
 }
 
@@ -25,11 +25,11 @@ pub fn get_shade(i:u8) -> Shade {
  * each of those two bit segments can represent a shade [0-3]
  * between white and black.
  */
-pub struct Palette {
+pub struct PaletteRegister {
     storage: u8
 }
 
-pub fn map_shade(shades:&[Shade;4], i:u8) -> Shade {
+pub fn map_shade(shades:&Palette, i:u8) -> Shade {
     match i {
         0 => shades[0],
         1 => shades[1],
@@ -39,7 +39,9 @@ pub fn map_shade(shades:&[Shade;4], i:u8) -> Shade {
     }
 }
 
-impl Palette {
+pub type Palette = [Shade;4];
+
+impl PaletteRegister {
     pub fn get(&self) -> u8 {
         self.storage
     }
@@ -48,7 +50,7 @@ impl Palette {
         self.storage = v
     }
 
-    pub fn get_shades(&self) -> [Shade;4] {
+    pub fn get_palette(&self) -> Palette {
         println!("Palette: {:b}", self.storage);
         let mask = 0x03;
 
@@ -66,6 +68,6 @@ impl Palette {
     }
 }
 
-pub fn new() -> Palette {
-    Palette{storage:0}
+pub fn new() -> PaletteRegister {
+    PaletteRegister{storage:0}
 }

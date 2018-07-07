@@ -108,7 +108,7 @@ fn render_line(mmu: &mmu::MMU, framebuffer:&mut framebuffer::Framebuffer) {
          *
          * that are then mapped through a pallet
          */
-        let palette = mmu.hardware_io.background_palette.get_shades();
+        let palette = mmu.hardware_io.background_palette.get_palette();
         // TODO Optimization
         // Fetch the two bytes for the row here and then walk through with
         // bit shifts to get the pixels.

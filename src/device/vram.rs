@@ -38,7 +38,7 @@ impl TileData {
         let offset = (index as u16 * 16) as usize;
         let mut arr = [0;16];
 
-        println!("Fetching Tile Data From: {:X} to {:X}", offset, offset+16);
+        println!("Fetching Tile Data From Index: {} / {:X} to {:X}", index, offset, offset+16);
 
         arr.clone_from_slice(&self.storage[offset..offset+16]);
         Tile {

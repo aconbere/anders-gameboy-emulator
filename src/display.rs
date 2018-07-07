@@ -11,7 +11,8 @@ use framebuffer;
 
 enum State {
     Running,
-    Paused
+    Paused,
+    TileData,
 }
 
 pub struct Display {
@@ -30,7 +31,34 @@ impl Display {
     fn toggle_paused(&mut self) {
         match self.state {
             State::Running => self.state = State::Paused,
-            State::Paused => self.state = State::Running,
+            _ => self.state = State::Running,
+        }
+    }
+
+    fn draw(&self, canvas:&mut sdl2::render::Canvas<sdl2::video::Window>, framebuffer:&framebuffer::Framebuffer, scale:u32) {
+        canvas.clear();
+        canvas.present();
+
+        for x in 0..160 {
+            for y in 0..144 {
+                let i = (y * 160) + x;
+                match framebuffer[i] {
+                    palette::Shade::White =>
+                        canvas.set_draw_color(Color::RGBA(255, 255, 255, 255)),
+                    palette::Shade::LightGrey =>
+                        canvas.set_draw_color(Color::RGBA(211, 211, 211, 255)),
+                    palette::Shade::DarkGrey =>
+                        canvas.set_draw_color(Color::RGBA(169, 169, 169, 255)),
+                    palette::Shade::Black =>
+                        canvas.set_draw_color(Color::RGBA(0, 0, 0, 255)),
+                }
+                canvas.fill_rect(
+                    Rect::new((x as u32 * scale) as i32,
+                              (y as u32 * scale) as i32,
+                              scale,
+                              scale)
+                    ).unwrap();
+            }
         }
     }
 
@@ -61,35 +89,20 @@ impl Display {
             match self.state {
                 State::Running =>  {
                     gameboy.next_frame(&mut framebuffer);
-                    canvas.clear();
-                    canvas.present();
-
-                    for x in 0..160 {
-                        for y in 0..144 {
-                            let i = (y * 160) + x;
-                            match framebuffer[i] {
-                                palette::Shade::White =>
-                                    canvas.set_draw_color(Color::RGBA(255, 255, 255, 255)),
-                                palette::Shade::LightGrey =>
-                                    canvas.set_draw_color(Color::RGBA(211, 211, 211, 255)),
-                                palette::Shade::DarkGrey =>
-                                    canvas.set_draw_color(Color::RGBA(169, 169, 169, 255)),
-                                palette::Shade::Black =>
-                                    canvas.set_draw_color(Color::RGBA(0, 0, 0, 255)),
-                            }
-                            canvas.fill_rect(
-                                Rect::new((x as u32 * scale) as i32,
-                                          (y as u32 * scale) as i32,
-                                          scale,
-                                          scale)
-                                ).unwrap();
-                        }
-                    }
+                    self.draw(&mut canvas, &framebuffer, scale);
                     let surface = font.render(&format!("F:{}", self.frame_count)).blended(Color::RGBA(255, 0, 0, 255)).unwrap();
                     let texture = texture_creator.create_texture_from_surface(&surface).unwrap();
                     canvas.copy(&texture, None, Some(target)).unwrap();
                     canvas.present();
                     self.frame_count += 1;
+                },
+                State::TileData =>  {
+                    gameboy.render_tile_data(&mut framebuffer);
+                    self.draw(&mut canvas, &framebuffer, scale);
+                    let surface = font.render(&format!("Tile Data")).blended(Color::RGBA(255, 0, 0, 255)).unwrap();
+                    let texture = texture_creator.create_texture_from_surface(&surface).unwrap();
+                    canvas.copy(&texture, None, Some(target)).unwrap();
+                    canvas.present();
                 },
                 State::Paused => {
                     canvas.clear();
@@ -108,7 +121,7 @@ impl Display {
                     Event::KeyDown {keycode: Option::Some(Keycode::Space), ..} =>
                         self.toggle_paused(),
                     Event::KeyDown {keycode: Option::Some(Keycode::D), ..} =>
-                        self.toggle_paused(),
+                        self.state = State::TileData,
                     _ => {}
                 }
             }
