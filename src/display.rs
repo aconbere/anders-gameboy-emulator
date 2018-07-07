@@ -84,6 +84,7 @@ impl Display {
 
         let mut events = sdl_context.event_pump().unwrap();
         let mut framebuffer:framebuffer::Framebuffer = [palette::Shade::White;23040];
+        let mut rendered = false;
 
         'mainloop: loop {
             match self.state {
@@ -97,15 +98,17 @@ impl Display {
                     self.frame_count += 1;
                 },
                 State::TileData =>  {
-                    gameboy.render_tile_data(&mut framebuffer);
-                    self.draw(&mut canvas, &framebuffer, scale);
-                    let surface = font.render(&format!("Tile Data")).blended(Color::RGBA(255, 0, 0, 255)).unwrap();
-                    let texture = texture_creator.create_texture_from_surface(&surface).unwrap();
-                    canvas.copy(&texture, None, Some(target)).unwrap();
+                    if !rendered {
+                        gameboy.render_tile_data(&mut framebuffer);
+                        self.draw(&mut canvas, &framebuffer, scale);
+                        let surface = font.render(&format!("Tile Data")).blended(Color::RGBA(255, 0, 0, 255)).unwrap();
+                        let texture = texture_creator.create_texture_from_surface(&surface).unwrap();
+                        canvas.copy(&texture, None, Some(target)).unwrap();
+                        rendered = true;
+                    }
                     canvas.present();
                 },
                 State::Paused => {
-                    canvas.clear();
                     let surface = font.render(&format!("Paused")).blended(Color::RGBA(255, 0, 0, 255)).unwrap();
                     let texture = texture_creator.create_texture_from_surface(&surface).unwrap();
                     canvas.copy(&texture, None, Some(target)).unwrap();

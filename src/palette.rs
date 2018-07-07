@@ -35,7 +35,7 @@ pub fn map_shade(shades:&Palette, i:u8) -> Shade {
         1 => shades[1],
         2 => shades[2],
         3 => shades[3],
-        _ => panic!("invalid shade index"),
+        _ => panic!("invalid shade index: {}", i),
     }
 }
 
@@ -51,7 +51,6 @@ impl PaletteRegister {
     }
 
     pub fn get_palette(&self) -> Palette {
-        println!("Palette: {:b}", self.storage);
         let mask = 0x03;
 
         /* we take our mask 00000011 in binary and we check what the value is

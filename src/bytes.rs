@@ -22,6 +22,15 @@ pub fn get_bit(input: u8, n: u8) -> u8 {
     input & (1 << n)
 }
 
+pub fn add_bool(a:bool, b:bool) -> u8 {
+    match (a,b) {
+        (true, true) => 3,
+        (true, false) => 2,
+        (false, true) => 1,
+        (false, false) => 0,
+    }
+}
+
 pub fn check_bit(input: u8, n: u8) -> bool {
     if n < 8 {
         get_bit(input, n) != 0

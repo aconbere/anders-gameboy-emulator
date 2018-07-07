@@ -64,12 +64,10 @@ impl Gameboy {
         for ty in 0..18 {
             for tx in 0..20 {
                 let i = (ty * 20) + tx;
-                let tile = if i < 192 {
-                    println!("WTF: {}", i);
-                    self.mmu.tile_data_1.get_tile(i)
-                } else {
-                    self.mmu.tile_data_2.get_tile(i)
-                };
+                if i >= 192 {
+                    return
+                }
+                let tile = self.mmu.tile_data_1.get_tile(i);
                 self.render_tile(framebuffer, &tile, &palette, tx, ty);
             }
         }

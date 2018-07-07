@@ -38,8 +38,6 @@ impl TileData {
         let offset = (index as u16 * 16) as usize;
         let mut arr = [0;16];
 
-        println!("Fetching Tile Data From Index: {} / {:X} to {:X}", index, offset, offset+16);
-
         arr.clone_from_slice(&self.storage[offset..offset+16]);
         Tile {
             storage: arr
@@ -81,6 +79,8 @@ impl Tile {
         let y_offset = y * 2;
         let top_byte = self.storage[y_offset as usize];
         let bottom_byte = self.storage[(y_offset + 1) as usize];
-        bytes::get_bit(top_byte, x) + bytes::get_bit(bottom_byte, x)
+        let tb = bytes::check_bit(top_byte, x);
+        let bb = bytes::check_bit(bottom_byte, x);
+        bytes::add_bool(tb, bb)
     }
 }
