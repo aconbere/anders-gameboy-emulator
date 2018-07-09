@@ -9,10 +9,34 @@ use gameboy;
 use palette;
 use framebuffer;
 
+struct RateLimiter {
+    fps: u32,
+    last_ticks: u32,
+}
+
+fn new_rate_limiter() -> RateLimiter {
+    RateLimiter {
+        fps: 60,
+        last_ticks: 0
+    }
+}
+
+impl RateLimiter {
+    pub fn limit(&mut self, timer:&mut sdl2::TimerSubsystem) {
+        let ticks = timer.ticks();
+        let adjusted_ticks = ticks - self.last_ticks;
+        if adjusted_ticks < 1000 / self.fps {
+            timer.delay((1000 / self.fps) - adjusted_ticks);
+        }
+        self.last_ticks = ticks;
+    }
+}
+
 enum State {
     Running,
     Paused,
     TileData,
+    TileMap,
 }
 
 pub struct Display {
@@ -65,6 +89,7 @@ impl Display {
     pub fn start(&mut self, gameboy:&mut gameboy::Gameboy) {
         let sdl_context = sdl2::init().unwrap();
         let ttf_context = sdl2::ttf::init().unwrap();
+        let mut timer = sdl_context.timer().unwrap();
         let video_subsystem = sdl_context.video().unwrap();
         let scale:u32 = 4;
 
@@ -84,7 +109,9 @@ impl Display {
 
         let mut events = sdl_context.event_pump().unwrap();
         let mut framebuffer:framebuffer::Framebuffer = [palette::Shade::White;23040];
-        let mut rendered = false;
+        let mut rendered_tile_data = false;
+        let mut rendered_tile_map = false;
+        let mut rate_limiter = new_rate_limiter();
 
         'mainloop: loop {
             match self.state {
@@ -98,15 +125,28 @@ impl Display {
                     self.frame_count += 1;
                 },
                 State::TileData =>  {
-                    if !rendered {
+                    if !rendered_tile_data {
                         gameboy.render_tile_data(&mut framebuffer);
                         self.draw(&mut canvas, &framebuffer, scale);
                         let surface = font.render(&format!("Tile Data")).blended(Color::RGBA(255, 0, 0, 255)).unwrap();
                         let texture = texture_creator.create_texture_from_surface(&surface).unwrap();
                         canvas.copy(&texture, None, Some(target)).unwrap();
-                        rendered = true;
+                        rendered_tile_data = true;
+                        canvas.present();
                     }
-                    canvas.present();
+                },
+                State::TileMap => {
+                    if !rendered_tile_map {
+                        canvas.clear();
+                        let (tm1, tm2) = gameboy.get_tile_maps();
+                        println!("TileMap1:\n{:?}", tm1);
+                        println!("TileMap2:\n{:?}", tm2);
+                        let surface = font.render(&format!("Tile Map")).blended(Color::RGBA(255, 0, 0, 255)).unwrap();
+                        let texture = texture_creator.create_texture_from_surface(&surface).unwrap();
+                        canvas.copy(&texture, None, Some(target)).unwrap();
+                        canvas.present();
+                        rendered_tile_map = true;
+                    }
                 },
                 State::Paused => {
                     let surface = font.render(&format!("Paused")).blended(Color::RGBA(255, 0, 0, 255)).unwrap();
@@ -115,6 +155,8 @@ impl Display {
                     canvas.present();
                 }
             }
+
+            rate_limiter.limit(&mut timer);
 
             for event in events.poll_iter() {
                 match event {
@@ -125,6 +167,12 @@ impl Display {
                         self.toggle_paused(),
                     Event::KeyDown {keycode: Option::Some(Keycode::D), ..} =>
                         self.state = State::TileData,
+                    Event::KeyDown {keycode: Option::Some(Keycode::M), ..} =>
+                        self.state = State::TileMap,
+                    Event::KeyDown {keycode: Option::Some(Keycode::Right), ..} => {
+                        rendered_tile_data = false;
+                        rendered_tile_map = false;
+                    }
                     _ => {}
                 }
             }

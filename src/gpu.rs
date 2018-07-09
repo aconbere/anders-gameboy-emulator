@@ -61,14 +61,14 @@ fn render_line(mmu: &mmu::MMU, framebuffer:&mut framebuffer::Framebuffer) {
         let tile_index_y = y_offset / 8;
         let tile_index_x = x_offset / 8;
 
-        println!("Tile Index: {}, {}", tile_index_x, tile_index_y);
+        // println!("Tile Index: {}, {}", tile_index_x, tile_index_y);
 
         let tile_map_select = mmu.hardware_io.lcd_control_register.get_flag(LCDControlFlag::TileMapSelect);
         let tile_data_select = mmu.hardware_io.lcd_control_register.get_flag(LCDControlFlag::TileDataSelect);
 
         /* Figure out where to to find the data in the tile map index */
         let tile_map_index:u16 = (tile_index_y as u16 * 32) + tile_index_x as u16;
-        println!("Tile Map Index: {}", tile_map_index);
+        // println!("Tile Map Index: {}", tile_map_index);
 
         let tile_data_index = if tile_map_select {
             mmu.tile_map_2.get(tile_map_index)

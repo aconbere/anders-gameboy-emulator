@@ -1,21 +1,41 @@
 use bytes;
+use std::fmt;
 
-
+#[derive(Copy)]
 pub struct TileMap {
     storage: [u8;1024] 
 }
 
 impl TileMap {
     pub fn get(&self, a:u16) -> u8 {
-        println!("Getting tile map from {:X}", a);
+        // println!("Getting tile map from {:X}", a);
         self.storage[a as usize]
     }
 
     pub fn set(&mut self, a:u16, v:u8) {
-        println!("Setting tile map {:X} to {:X}", a, v);
+        // println!("Setting tile map {:X} to {:X}", a, v);
         self.storage[a as usize] = v;
     }
 }
+
+impl Clone for TileMap {
+    fn clone(&self) -> TileMap { *self }
+}
+
+impl fmt::Debug for TileMap {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut i = 0;
+        for _ in 0..31 {
+            for _ in 0..31 {
+                let _ = write!(f, "{:X},", self.storage[i]);
+                i += 1;
+            }
+            let _ = write!(f, "\n");
+        }
+        write!(f, "")
+    }
+}
+
 
 pub struct TileData {
     storage: [u8;4096] 
@@ -27,7 +47,7 @@ impl TileData {
     }
 
     pub fn set(&mut self, a:u16, v:u8) {
-        println!("Setting tile data {:X} to {:X}", a, v);
+        // println!("Setting tile data {:X} to {:X}", a, v);
         self.storage[a as usize] = v
     }
 }

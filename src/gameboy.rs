@@ -72,6 +72,10 @@ impl Gameboy {
             }
         }
     }
+
+    pub fn get_tile_maps(&self) -> (device::vram::TileMap, device::vram::TileMap) {
+        (self.mmu.tile_map_1.clone(), self.mmu.tile_map_2.clone())
+    }
 }
 
 pub fn new() -> Gameboy {
