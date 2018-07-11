@@ -4,6 +4,7 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
+use std::path::Path;
 
 use framebuffer;
 use gameboy;
@@ -108,7 +109,7 @@ impl Display {
         let texture_creator = canvas.texture_creator();
         let font = ttf_context
             .load_font(
-                String::from("/Users/anders/Projects/gbx/Roboto-Black.ttf"),
+                Path::new("./fonts/Roboto-Black.ttf"),
                 128,
             )
             .unwrap();
