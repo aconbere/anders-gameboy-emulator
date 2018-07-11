@@ -40,6 +40,9 @@ pub fn map_shade(shades:&Palette, i:u8) -> Shade {
 }
 
 pub type Palette = [Shade;4];
+pub fn print_palette(p: Palette) {
+    println!("Palette: [{:?},{:?},{:?},{:?}]", p[0], p[1], p[2], p[3]);
+}
 
 impl PaletteRegister {
     pub fn get(&self) -> u8 {
@@ -51,6 +54,7 @@ impl PaletteRegister {
     }
 
     pub fn get_palette(&self) -> Palette {
+        println!("palette: {:X}, {:b}", self.storage, self.storage);
         let mask = 0x03;
 
         /* we take our mask 00000011 in binary and we check what the value is

@@ -43,7 +43,6 @@ impl CPU {
         prefix:bool
     ) -> instructions::Op {
         let pc = registers.get16(&registers::Registers16::PC);
-        // println!("\tpc: {}", pc);
 
         let opcode = mmu.get(pc);
         registers.inc_pc();
@@ -62,20 +61,16 @@ impl CPU {
         mut registers: &mut registers::Registers,
         mmu:&mut mmu::MMU
     ) -> u8 {
-
         match instruction {
             instructions::Op::PrefixCB => {
                 self.state = State::Prefix;
                 0
             },
             instructions::Op::Halt => {
-                // println!("HALTING!");
                 self.state = State::Halted;
                 0
             },
             _ => {
-                // println!("\tinstruction: {:?}", instruction);
-
                 let mut args = Vec::new();
                 for _ in 0..instruction.args() {
                     let next = registers.get16(&registers::Registers16::PC);
@@ -83,7 +78,8 @@ impl CPU {
                     registers.inc_pc()
                 }
 
-                // println!("\tcalling instruction: {:?} with args: {:X?}", instruction, args);
+                let pc = registers.get16(&registers::Registers16::PC);
+                println!("pc: {:X} |\t\t{:?}\t\t| {:X?}", pc, instruction, args);
 
                 instruction.call(&mut registers, mmu, args)
             }

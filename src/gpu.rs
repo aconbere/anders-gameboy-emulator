@@ -29,10 +29,11 @@ fn render_line(mmu: &mmu::MMU, framebuffer:&mut framebuffer::Framebuffer) {
     // println!("RENDERING LINE");
     // get our y-offset, this wont change per scan line
     let y_offset = mmu.hardware_io.lcd_line_count.get() + mmu.hardware_io.lcd_scroll_position_y;
+    println!("observed lcd_scroll_position_y: {:X}", mmu.hardware_io.lcd_scroll_position_y);
 
     /* Fetch the currently active palette
      */
-    // let pallet = mmu.hardware_io.background_palette.get_shades();
+    // let palette = mmu.hardware_io.background_palette.get_shades();
 
     // let mut line:[palette::Shade;160] = [palette::Shade::White;160];
 
@@ -58,10 +59,15 @@ fn render_line(mmu: &mmu::MMU, framebuffer:&mut framebuffer::Framebuffer) {
         // println!("Pixel: {} X: {} Y: {}", i, x_offset, y_offset);
 
         // /* This block determines which tile we are on in the 32x32 grid.
-        let tile_index_y = y_offset / 8;
-        let tile_index_x = x_offset / 8;
+        // let tile_index_y = y_offset / 8;
+        // let tile_index_x = x_offset / 8;
 
-        // println!("Tile Index: {}, {}", tile_index_x, tile_index_y);
+        // Try hardcoding this
+        let tile_index_y = 9;
+        let tile_index_x = 13;
+
+
+        println!("Tile Index: {} {}", tile_index_x, tile_index_y);
 
         let tile_map_select = mmu.hardware_io.lcd_control_register.get_flag(LCDControlFlag::TileMapSelect);
         let tile_data_select = mmu.hardware_io.lcd_control_register.get_flag(LCDControlFlag::TileDataSelect);
@@ -76,7 +82,7 @@ fn render_line(mmu: &mmu::MMU, framebuffer:&mut framebuffer::Framebuffer) {
             mmu.tile_map_1.get(tile_map_index)
         };
 
-        // println!("Tile Data Index: {}", tile_data_index);
+        println!("Tile Data Index: {}", tile_data_index);
 
         /* We check what tile data set is enabled and use the tile data index found previously to
          * fetch a tile.
@@ -106,16 +112,18 @@ fn render_line(mmu: &mmu::MMU, framebuffer:&mut framebuffer::Framebuffer) {
 
         /* For each pixel in the tile render the pixel. Now... of course this can't be simple.
          *
-         * that are then mapped through a pallet
+         * that are then mapped through a palette
          */
         let palette = mmu.hardware_io.background_palette.get_palette();
+        palette::print_palette(palette);
+
         // TODO Optimization
         // Fetch the two bytes for the row here and then walk through with
         // bit shifts to get the pixels.
         for px in pixel_index_x..8 {
             // println!("Render Tile: {}", px);
             let pixel = tile_data.get_pixel(px, pixel_index_y);
-            // get the pallet for the tile
+            // get the palette for the tile
             // render the RGB values into a struct
             // println!("Pixel: {}", pixel);
             let frame_index = (mmu.hardware_io.lcd_scroll_position_y as u32 * 160) + i as u32; 

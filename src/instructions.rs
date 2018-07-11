@@ -327,6 +327,7 @@ impl Op {
             Op::LoadFF00(LoadFF00Targets::A, LoadFF00Targets::N)=> {
                 let ma = args[0] as u16;
                 let v = mmu.get(ma + 0xFF00);
+                // println!("LoadFF00: Loading A with {:X}", v);
                 registers.set8(&registers::Registers8::A, v);
                 8
             },
@@ -354,18 +355,18 @@ impl Op {
             Op::JR(JrArgs::CheckFlag(f)) => {
                 let check = match f {
                     CheckFlag::Z => registers.get_flag(registers::Flag::Z),
-                    CheckFlag::NZ => registers.get_flag(registers::Flag::Z),
+                    CheckFlag::NZ => !registers.get_flag(registers::Flag::Z),
                     CheckFlag::C => registers.get_flag(registers::Flag::C),
-                    CheckFlag::NC => registers.get_flag(registers::Flag::C),
+                    CheckFlag::NC => !registers.get_flag(registers::Flag::C),
                 };
 
                 if check {
-                    // println!("JR: Check {:?} true continuing", f);
-                    12
-                } else {
-                    // println!("JR: Check {:?} false jumping", f);
+                    // println!("JR: Check {:?} {} jumping", f, check);
                     jump_relative(registers, args[0] as i8);
                     16
+                } else {
+                    // println!("JR: Check {:?} {} continuing", f, check);
+                    12
                 }
             },
             Op::JR(JrArgs::N) => {
@@ -477,7 +478,7 @@ impl Op {
                 registers.set_flag(registers::Flag::H, v & 0x0F == 0x0F);
 
                 registers.set8(r, n);
-                // println!("Dec8: Decrementing {:?} to {:X} -> {:X}", r, v, registers.get8(r));
+                // println!("Dec8: Decrementing {:?} to {:X}", r, n);
                 4
             },
             Op::Dec8(Destination8::Mem(r)) => {

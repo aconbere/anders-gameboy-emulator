@@ -36,9 +36,14 @@ impl fmt::Debug for TileMap {
     }
 }
 
+pub enum TileDataKind {
+    Top,
+    Bottom
+}
 
 pub struct TileData {
-    storage: [u8;4096] 
+    storage: [u8;4096],
+    kind: TileDataKind
 }
 
 impl TileData {
@@ -72,9 +77,10 @@ pub fn new_tile_map() -> TileMap {
     }
 }
 
-pub fn new_tile_data() -> TileData {
+pub fn new_tile_data(kind:TileDataKind) -> TileData {
     TileData {
-        storage: [0;4096]
+        storage: [0;4096],
+        kind: kind,
     }
 }
 
