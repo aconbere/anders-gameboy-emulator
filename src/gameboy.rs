@@ -57,13 +57,12 @@ impl Gameboy {
             for x in 0..8 {
                 let i = (((ty + y) as u16 * 160) + (tx + x) as u16) as usize;
 
-                framebuffer[i] = palette::map_shade(palette, tile.get_pixel(x, y));
+                framebuffer[i] = palette.map_shades(tile.get_pixel(x, y));
             }
         }
     }
 
     pub fn render_tile_data(&self, framebuffer: &mut framebuffer::Framebuffer) {
-        let palette = self.mmu.hardware_io.background_palette.get_palette();
         for ty in 0..18 {
             for tx in 0..20 {
                 let i = (ty * 20) + tx;
@@ -71,7 +70,7 @@ impl Gameboy {
                     return;
                 }
                 let tile = self.mmu.tile_data_1.get_tile(i);
-                self.render_tile(framebuffer, &tile, &palette, tx * 8, ty * 8);
+                self.render_tile(framebuffer, &tile, &self.mmu.hardware_io.background_palette, tx * 8, ty * 8);
             }
         }
     }

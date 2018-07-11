@@ -1,7 +1,6 @@
 use device::hardware_io::LCDControlFlag;
 use framebuffer;
 use mmu;
-use palette;
 
 #[derive(PartialEq)]
 pub enum Mode {
@@ -39,9 +38,6 @@ fn render_line(mmu: &mmu::MMU, framebuffer: &mut framebuffer::Framebuffer) {
     let mut i = 0;
     // for each pixel in a line
     while i < 160 {
-        /* Get the background palette that will be used */
-        let palette = mmu.hardware_io.background_palette.get_palette();
-
         /* The Tile Map is a 32x32 array where every byte is a reference to where in the tile data
          * to pull tile data from.
          *
@@ -119,7 +115,7 @@ fn render_line(mmu: &mmu::MMU, framebuffer: &mut framebuffer::Framebuffer) {
             // render the RGB values into a struct
             // println!("lcd line count: {}", mmu.hardware_io.lcd_line_count.get());
             let frame_index = (mmu.hardware_io.lcd_line_count.get() as u32 * 160) + i as u32;
-            framebuffer[frame_index as usize] = palette::map_shade(&palette, pixel);
+            framebuffer[frame_index as usize] = mmu.hardware_io.background_palette.map_shades(pixel);
             i += 1;
         }
     }
