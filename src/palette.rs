@@ -3,10 +3,10 @@ pub enum Shade {
     White,
     LightGrey,
     DarkGrey,
-    Black
+    Black,
 }
 
-pub fn get_shade(i:u8) -> Shade {
+pub fn get_shade(i: u8) -> Shade {
     match i {
         0 => Shade::White,
         1 => Shade::LightGrey,
@@ -26,10 +26,10 @@ pub fn get_shade(i:u8) -> Shade {
  * between white and black.
  */
 pub struct PaletteRegister {
-    storage: u8
+    storage: u8,
 }
 
-pub fn map_shade(shades:&Palette, i:u8) -> Shade {
+pub fn map_shade(shades: &Palette, i: u8) -> Shade {
     match i {
         0 => shades[0],
         1 => shades[1],
@@ -39,7 +39,7 @@ pub fn map_shade(shades:&Palette, i:u8) -> Shade {
     }
 }
 
-pub type Palette = [Shade;4];
+pub type Palette = [Shade; 4];
 pub fn print_palette(p: Palette) {
     println!("Palette: [{:?},{:?},{:?},{:?}]", p[0], p[1], p[2], p[3]);
 }
@@ -49,7 +49,7 @@ impl PaletteRegister {
         self.storage
     }
 
-    pub fn set(&mut self, v:u8) {
+    pub fn set(&mut self, v: u8) {
         self.storage = v
     }
 
@@ -67,10 +67,10 @@ impl PaletteRegister {
             get_shade((self.storage & (mask << 2)) >> 2),
             get_shade((self.storage & (mask << 4)) >> 4),
             get_shade((self.storage & (mask << 6)) >> 6),
-        ]
+        ];
     }
 }
 
 pub fn new() -> PaletteRegister {
-    PaletteRegister{storage:0}
+    PaletteRegister { storage: 0 }
 }

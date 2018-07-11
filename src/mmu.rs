@@ -2,8 +2,8 @@
  * http://gameboy.mongenel.com/dmg/asmmemmap.html
  */
 
-use device;
 use bytes;
+use device;
 use device::Device;
 
 pub struct MMU {
@@ -24,19 +24,20 @@ pub struct MMU {
 }
 
 impl MMU {
-    pub fn get16(&self, address:u16) -> u16 {
+    pub fn get16(&self, address: u16) -> u16 {
         let mh = self.get(address);
         let ml = self.get(address + 1);
         bytes::combine_little(mh, ml)
     }
 
-    pub fn get(&self, address:u16) -> u8 {
+    pub fn get(&self, address: u16) -> u8 {
         let k = device::get_kind(address);
 
         match k {
-            device::Kind::RestartAndInterrupt | device::Kind::CartridgeHeader | device::Kind::CartridgeROMBank0 | device::Kind::CartridgeROMBank1 => {
-                self.cartridge.get(address)
-            },
+            device::Kind::RestartAndInterrupt
+            | device::Kind::CartridgeHeader
+            | device::Kind::CartridgeROMBank0
+            | device::Kind::CartridgeROMBank1 => self.cartridge.get(address),
 
             device::Kind::TileData1 => self.tile_data_1.get(address - 0x8000),
             device::Kind::TileData2 => self.tile_data_2.get(address - 0x8800),
@@ -55,12 +56,14 @@ impl MMU {
         }
     }
 
-    pub fn set(&mut self, address:u16, v:u8) {
+    pub fn set(&mut self, address: u16, v: u8) {
         let k = device::get_kind(address);
 
         match k {
-            device::Kind::RestartAndInterrupt | device::Kind::CartridgeHeader | device::Kind::CartridgeROMBank0 | device::Kind::CartridgeROMBank1 =>
-                self.cartridge.set(address, v),
+            device::Kind::RestartAndInterrupt
+            | device::Kind::CartridgeHeader
+            | device::Kind::CartridgeROMBank0
+            | device::Kind::CartridgeROMBank1 => self.cartridge.set(address, v),
 
             device::Kind::TileData1 => self.tile_data_1.set(address - 0x8000, v),
             device::Kind::TileData2 => self.tile_data_2.set(address - 0x8800, v),
@@ -73,13 +76,9 @@ impl MMU {
             device::Kind::EchoRAM => self.echo_ram.set(address, v),
             device::Kind::ObjectAttributeMemory => self.object_attribute_memory.set(address, v),
             device::Kind::UnusableMemory => self.unusable_memory.set(address, v),
-            device::Kind::HardwareIORegisters => {
-                match address {
-                    0xFF50 => {
-                        self.cartridge.set_state(device::cartridge::States::Running)
-                    },
-                    _ => self.hardware_io.set(address - 0xFF00, v)
-                }
+            device::Kind::HardwareIORegisters => match address {
+                0xFF50 => self.cartridge.set_state(device::cartridge::States::Running),
+                _ => self.hardware_io.set(address - 0xFF00, v),
             },
             device::Kind::ZeroPage => self.zero_page.set(address - 0xFF80, v),
             device::Kind::InterruptEnableFlag => self.interrupt_enable.set(address, v),
@@ -88,13 +87,13 @@ impl MMU {
 }
 
 pub fn new() -> MMU {
-    let boot_rom = device::cartridge::load_boot_rom(
-        String::from("/Users/anders/Projects/gb_test_roms/DMG_ROM.bin")
-    );
+    let boot_rom = device::cartridge::load_boot_rom(String::from(
+        "/Users/anders/Projects/gb_test_roms/DMG_ROM.bin",
+    ));
 
     let cartridge = device::cartridge::load_cartridge(
         // String::from("/Users/anders/Projects/gb_test_roms/sheepitup.gb")
-        String::from("/Users/anders/Projects/gb_test_roms/Mona_And_The_Witch_Hat.gb")
+        String::from("/Users/anders/Projects/gb_test_roms/Mona_And_The_Witch_Hat.gb"),
     );
 
     MMU {
@@ -103,12 +102,12 @@ pub fn new() -> MMU {
         tile_map_2: device::vram::new_tile_map(),
         tile_data_1: device::vram::new_tile_data(device::vram::TileDataKind::Bottom),
         tile_data_2: device::vram::new_tile_data(device::vram::TileDataKind::Top),
-        cartridge_ram: device::not_implemented::NotImplemented{},
+        cartridge_ram: device::not_implemented::NotImplemented {},
         internal_ram_bank_0: device::ram_bank::new(),
         internal_ram_bank_1: device::ram_bank::new(),
-        echo_ram: device::not_implemented::NotImplemented{},
-        object_attribute_memory: device::not_implemented::NotImplemented{},
-        unusable_memory: device::not_implemented::NotImplemented{},
+        echo_ram: device::not_implemented::NotImplemented {},
+        object_attribute_memory: device::not_implemented::NotImplemented {},
+        unusable_memory: device::not_implemented::NotImplemented {},
         hardware_io: device::hardware_io::new(),
         zero_page: device::zero_page::new(),
         interrupt_enable: device::interrupt::new_enabled(),

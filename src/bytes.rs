@@ -1,18 +1,18 @@
-pub fn combine_little(a:u8, b:u8) -> u16 {
+pub fn combine_little(a: u8, b: u8) -> u16 {
     let a1 = a as u16;
     let b1 = b as u16;
 
     match b1.checked_shl(8) {
-        Some(s) =>  s | a1,
-        None => panic!("Invalid shift results")
+        Some(s) => s | a1,
+        None => panic!("Invalid shift results"),
     }
 }
 
-pub fn combine(a:u8, b:u8) -> u16 {
-    combine_little(b,a)
+pub fn combine(a: u8, b: u8) -> u16 {
+    combine_little(b, a)
 }
 
-pub fn split_u16(a:u16) -> (u8, u8) {
+pub fn split_u16(a: u16) -> (u8, u8) {
     let high = (a >> 8) as u8;
     let low = a as u8;
     (high, low)
@@ -22,8 +22,8 @@ pub fn get_bit(input: u8, n: u8) -> u8 {
     input & (1 << n)
 }
 
-pub fn add_bool(a:bool, b:bool) -> u8 {
-    match (a,b) {
+pub fn add_bool(a: bool, b: bool) -> u8 {
+    match (a, b) {
         (true, true) => 3,
         (true, false) => 2,
         (false, true) => 1,
@@ -47,7 +47,7 @@ pub fn clear_bit(input: u8, n: u8) -> u8 {
     input & !(1 << n)
 }
 
-pub fn add_unsigned_signed(unsigned:u16, signed:i8) -> u16 {
+pub fn add_unsigned_signed(unsigned: u16, signed: i8) -> u16 {
     if signed < 0 {
         unsigned - (-signed as u16)
     } else {

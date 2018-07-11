@@ -3,23 +3,25 @@ use std::fmt;
 
 #[derive(Copy)]
 pub struct TileMap {
-    storage: [u8;1024] 
+    storage: [u8; 1024],
 }
 
 impl TileMap {
-    pub fn get(&self, a:u16) -> u8 {
+    pub fn get(&self, a: u16) -> u8 {
         // println!("Getting tile map from {:X}", a);
         self.storage[a as usize]
     }
 
-    pub fn set(&mut self, a:u16, v:u8) {
+    pub fn set(&mut self, a: u16, v: u8) {
         // println!("Setting tile map {:X} to {:X}", a, v);
         self.storage[a as usize] = v;
     }
 }
 
 impl Clone for TileMap {
-    fn clone(&self) -> TileMap { *self }
+    fn clone(&self) -> TileMap {
+        *self
+    }
 }
 
 impl fmt::Debug for TileMap {
@@ -38,55 +40,49 @@ impl fmt::Debug for TileMap {
 
 pub enum TileDataKind {
     Top,
-    Bottom
+    Bottom,
 }
 
 pub struct TileData {
-    storage: [u8;4096],
-    kind: TileDataKind
+    storage: [u8; 4096],
+    kind: TileDataKind,
 }
 
 impl TileData {
-    pub fn get(&self, a:u16) -> u8 {
+    pub fn get(&self, a: u16) -> u8 {
         self.storage[a as usize]
     }
 
-    pub fn set(&mut self, a:u16, v:u8) {
+    pub fn set(&mut self, a: u16, v: u8) {
         // println!("Setting tile data {:X} to {:X}", a, v);
         self.storage[a as usize] = v
     }
 }
 
-
 impl TileData {
-    pub fn get_tile(&self, index:u8) -> Tile {
+    pub fn get_tile(&self, index: u8) -> Tile {
         let offset = (index as u16 * 16) as usize;
-        let mut arr = [0;16];
+        let mut arr = [0; 16];
 
-        arr.clone_from_slice(&self.storage[offset..offset+16]);
-        Tile {
-            storage: arr
-        }
+        arr.clone_from_slice(&self.storage[offset..offset + 16]);
+        Tile { storage: arr }
     }
 }
-
 
 pub fn new_tile_map() -> TileMap {
-    TileMap {
-        storage: [0;1024]
-    }
+    TileMap { storage: [0; 1024] }
 }
 
-pub fn new_tile_data(kind:TileDataKind) -> TileData {
+pub fn new_tile_data(kind: TileDataKind) -> TileData {
     TileData {
-        storage: [0;4096],
+        storage: [0; 4096],
         kind: kind,
     }
 }
 
 #[derive(Debug)]
 pub struct Tile {
-    pub storage: [u8;16]
+    pub storage: [u8; 16],
 }
 
 /*
@@ -96,24 +92,24 @@ pub struct Tile {
  *
  * [0,1,0,0,1,1,1,0]
  * [1,0,0,0,1,0,1,1]
- *  
+ *
  * results in a row of pixels:
  * [2,1,0,0,3,1,3.2]
  */
 impl Tile {
-    pub fn get_pixel(&self, x:u8, y:u8) -> u8 {
+    pub fn get_pixel(&self, x: u8, y: u8) -> u8 {
         let y_offset = y * 2;
         let top_byte = self.storage[y_offset as usize];
         let bottom_byte = self.storage[(y_offset + 1) as usize];
-        let tb = bytes::check_bit(top_byte, 7-x);
-        let bb = bytes::check_bit(bottom_byte, 7-x);
+        let tb = bytes::check_bit(top_byte, 7 - x);
+        let bb = bytes::check_bit(bottom_byte, 7 - x);
         bytes::add_bool(tb, bb)
     }
 
     pub fn is_zero(&self) -> bool {
         for i in self.storage.iter() {
             if *i != 0 {
-                return true
+                return true;
             }
         }
         false

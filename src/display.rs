@@ -5,9 +5,9 @@ use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 
+use framebuffer;
 use gameboy;
 use palette;
-use framebuffer;
 
 struct RateLimiter {
     fps: u32,
@@ -17,12 +17,12 @@ struct RateLimiter {
 fn new_rate_limiter() -> RateLimiter {
     RateLimiter {
         fps: 60,
-        last_ticks: 0
+        last_ticks: 0,
     }
 }
 
 impl RateLimiter {
-    pub fn limit(&mut self, timer:&mut sdl2::TimerSubsystem) {
+    pub fn limit(&mut self, timer: &mut sdl2::TimerSubsystem) {
         let ticks = timer.ticks();
         let adjusted_ticks = ticks - self.last_ticks;
         if adjusted_ticks < 1000 / self.fps {
@@ -41,7 +41,7 @@ enum State {
 
 pub struct Display {
     frame_count: u32,
-    state: State
+    state: State,
 }
 
 pub fn new() -> Display {
@@ -59,97 +59,126 @@ impl Display {
         }
     }
 
-    fn draw(&self, canvas:&mut sdl2::render::Canvas<sdl2::video::Window>, framebuffer:&framebuffer::Framebuffer, scale:u32) {
+    fn draw(
+        &self,
+        canvas: &mut sdl2::render::Canvas<sdl2::video::Window>,
+        framebuffer: &framebuffer::Framebuffer,
+        scale: u32,
+    ) {
         for x in 0..160 {
             for y in 0..144 {
                 let i = (y * 160) + x;
                 match framebuffer[i] {
-                    palette::Shade::White =>
-                        canvas.set_draw_color(Color::RGBA(255, 255, 255, 255)),
-                    palette::Shade::LightGrey =>
-                        canvas.set_draw_color(Color::RGBA(211, 211, 211, 255)),
-                    palette::Shade::DarkGrey =>
-                        canvas.set_draw_color(Color::RGBA(169, 169, 169, 255)),
-                    palette::Shade::Black =>
-                        canvas.set_draw_color(Color::RGBA(0, 0, 0, 255)),
+                    palette::Shade::White => canvas.set_draw_color(Color::RGBA(255, 255, 255, 255)),
+                    palette::Shade::LightGrey => {
+                        canvas.set_draw_color(Color::RGBA(211, 211, 211, 255))
+                    }
+                    palette::Shade::DarkGrey => {
+                        canvas.set_draw_color(Color::RGBA(169, 169, 169, 255))
+                    }
+                    palette::Shade::Black => canvas.set_draw_color(Color::RGBA(0, 0, 0, 255)),
                 }
-                canvas.fill_rect(
-                    Rect::new((x as u32 * scale) as i32,
-                              (y as u32 * scale) as i32,
-                              scale,
-                              scale)
-                    ).unwrap();
+                canvas
+                    .fill_rect(Rect::new(
+                        (x as u32 * scale) as i32,
+                        (y as u32 * scale) as i32,
+                        scale,
+                        scale,
+                    ))
+                    .unwrap();
             }
         }
     }
 
-    pub fn start(&mut self, gameboy:&mut gameboy::Gameboy) {
+    pub fn start(&mut self, gameboy: &mut gameboy::Gameboy) {
         let sdl_context = sdl2::init().unwrap();
         let ttf_context = sdl2::ttf::init().unwrap();
         let mut timer = sdl_context.timer().unwrap();
         let video_subsystem = sdl_context.video().unwrap();
-        let scale:u32 = 4;
+        let scale: u32 = 4;
 
-        let window = video_subsystem.window("Gameboy", 160 * scale, 144 * scale)
-          .position_centered()
-          .build()
-          .unwrap();
+        let window = video_subsystem
+            .window("Gameboy", 160 * scale, 144 * scale)
+            .position_centered()
+            .build()
+            .unwrap();
 
         let mut canvas = window.into_canvas().software().build().unwrap();
 
         let texture_creator = canvas.texture_creator();
-        let font = ttf_context.load_font(String::from("/Users/anders/Projects/gbx/Roboto-Black.ttf"), 128).unwrap();
-        let target = Rect::new(10,10,80,20);
+        let font = ttf_context
+            .load_font(
+                String::from("/Users/anders/Projects/gbx/Roboto-Black.ttf"),
+                128,
+            )
+            .unwrap();
+        let target = Rect::new(10, 10, 80, 20);
 
         canvas.clear();
         canvas.present();
 
         let mut events = sdl_context.event_pump().unwrap();
-        let mut framebuffer:framebuffer::Framebuffer = [palette::Shade::White;23040];
+        let mut framebuffer: framebuffer::Framebuffer = [palette::Shade::White; 23040];
         let mut rendered_tile_data = false;
         let mut rendered_tile_map = false;
         let mut rate_limiter = new_rate_limiter();
 
         let paused_text = {
-            let surface = font.render(&format!("Paused")).blended(Color::RGBA(255, 0, 0, 255)).unwrap();
-            texture_creator.create_texture_from_surface(&surface).unwrap()
+            let surface = font.render(&format!("Paused"))
+                .blended(Color::RGBA(255, 0, 0, 255))
+                .unwrap();
+            texture_creator
+                .create_texture_from_surface(&surface)
+                .unwrap()
         };
 
         'mainloop: loop {
             match self.state {
-                State::Running =>  {
+                State::Running => {
                     gameboy.next_frame(&mut framebuffer);
                     self.draw(&mut canvas, &framebuffer, scale);
-                    let surface = font.render(&format!("F:{}", self.frame_count)).blended(Color::RGBA(255, 0, 0, 255)).unwrap();
-                    let texture = texture_creator.create_texture_from_surface(&surface).unwrap();
+                    let surface = font.render(&format!("F:{}", self.frame_count))
+                        .blended(Color::RGBA(255, 0, 0, 255))
+                        .unwrap();
+                    let texture = texture_creator
+                        .create_texture_from_surface(&surface)
+                        .unwrap();
                     canvas.copy(&texture, None, Some(target)).unwrap();
                     canvas.present();
                     self.frame_count += 1;
-                },
-                State::TileData =>  {
+                }
+                State::TileData => {
                     if !rendered_tile_data {
                         gameboy.render_tile_data(&mut framebuffer);
                         self.draw(&mut canvas, &framebuffer, scale);
-                        let surface = font.render(&format!("Tile Data")).blended(Color::RGBA(255, 0, 0, 255)).unwrap();
-                        let texture = texture_creator.create_texture_from_surface(&surface).unwrap();
+                        let surface = font.render(&format!("Tile Data"))
+                            .blended(Color::RGBA(255, 0, 0, 255))
+                            .unwrap();
+                        let texture = texture_creator
+                            .create_texture_from_surface(&surface)
+                            .unwrap();
                         canvas.copy(&texture, None, Some(target)).unwrap();
                         rendered_tile_data = true;
                         canvas.present();
                     }
-                },
+                }
                 State::TileMap => {
                     if !rendered_tile_map {
                         canvas.clear();
                         let (tm1, tm2) = gameboy.get_tile_maps();
                         println!("TileMap1:\n{:?}", tm1);
                         println!("TileMap2:\n{:?}", tm2);
-                        let surface = font.render(&format!("Tile Map")).blended(Color::RGBA(255, 0, 0, 255)).unwrap();
-                        let texture = texture_creator.create_texture_from_surface(&surface).unwrap();
+                        let surface = font.render(&format!("Tile Map"))
+                            .blended(Color::RGBA(255, 0, 0, 255))
+                            .unwrap();
+                        let texture = texture_creator
+                            .create_texture_from_surface(&surface)
+                            .unwrap();
                         canvas.copy(&texture, None, Some(target)).unwrap();
                         canvas.present();
                         rendered_tile_map = true;
                     }
-                },
+                }
                 State::Paused => {
                     canvas.clear();
                     self.draw(&mut canvas, &framebuffer, scale);
@@ -162,16 +191,27 @@ impl Display {
 
             for event in events.poll_iter() {
                 match event {
-                    Event::Quit{..} |
-                    Event::KeyDown {keycode: Option::Some(Keycode::Escape), ..} =>
-                        break 'mainloop,
-                    Event::KeyDown {keycode: Option::Some(Keycode::Space), ..} =>
-                        self.toggle_paused(),
-                    Event::KeyDown {keycode: Option::Some(Keycode::D), ..} =>
-                        self.state = State::TileData,
-                    Event::KeyDown {keycode: Option::Some(Keycode::M), ..} =>
-                        self.state = State::TileMap,
-                    Event::KeyDown {keycode: Option::Some(Keycode::Right), ..} => {
+                    Event::Quit { .. }
+                    | Event::KeyDown {
+                        keycode: Option::Some(Keycode::Escape),
+                        ..
+                    } => break 'mainloop,
+                    Event::KeyDown {
+                        keycode: Option::Some(Keycode::Space),
+                        ..
+                    } => self.toggle_paused(),
+                    Event::KeyDown {
+                        keycode: Option::Some(Keycode::D),
+                        ..
+                    } => self.state = State::TileData,
+                    Event::KeyDown {
+                        keycode: Option::Some(Keycode::M),
+                        ..
+                    } => self.state = State::TileMap,
+                    Event::KeyDown {
+                        keycode: Option::Some(Keycode::Right),
+                        ..
+                    } => {
                         rendered_tile_data = false;
                         rendered_tile_map = false;
                     }
@@ -181,4 +221,3 @@ impl Display {
         }
     }
 }
-

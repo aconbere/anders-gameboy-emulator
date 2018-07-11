@@ -1,5 +1,5 @@
-use device::Device;
 use bytes;
+use device::Device;
 use palette;
 
 pub enum LCDControlFlag {
@@ -30,11 +30,11 @@ impl LCDControlFlag {
 }
 
 pub struct LCDControlRegister {
-    storage: u8
+    storage: u8,
 }
 
 impl LCDControlRegister {
-    pub fn set_flag(&mut self, f: LCDControlFlag, t:bool) {
+    pub fn set_flag(&mut self, f: LCDControlFlag, t: bool) {
         if t {
             self.storage = bytes::set_bit(self.storage, f.get_index());
         } else {
@@ -51,7 +51,7 @@ impl LCDControlRegister {
         self.storage
     }
 
-    pub fn set(&mut self, v:u8) {
+    pub fn set(&mut self, v: u8) {
         self.storage = v
     }
 }
@@ -75,26 +75,25 @@ pub enum LCDStatusFlag {
 impl LCDStatusFlag {
     pub fn get_index(&self) -> u8 {
         match self {
-            LCDStatusFlag::LYCoincidence => 6, 
-            LCDStatusFlag::OAM => 5, 
-            LCDStatusFlag::VBlank => 4, 
-            LCDStatusFlag::HBlank => 3, 
-            LCDStatusFlag::Coincidence => 2, 
-            LCDStatusFlag::Mode(LCDModes::HBlank) => 1, 
-            LCDStatusFlag::Mode(LCDModes::VBlank) => 1, 
-            LCDStatusFlag::Mode(LCDModes::Searching) => 0, 
-            LCDStatusFlag::Mode(LCDModes::Transfer) => 0, 
+            LCDStatusFlag::LYCoincidence => 6,
+            LCDStatusFlag::OAM => 5,
+            LCDStatusFlag::VBlank => 4,
+            LCDStatusFlag::HBlank => 3,
+            LCDStatusFlag::Coincidence => 2,
+            LCDStatusFlag::Mode(LCDModes::HBlank) => 1,
+            LCDStatusFlag::Mode(LCDModes::VBlank) => 1,
+            LCDStatusFlag::Mode(LCDModes::Searching) => 0,
+            LCDStatusFlag::Mode(LCDModes::Transfer) => 0,
         }
     }
 }
 
-
 pub struct LCDStatusRegister {
-    storage: u8
+    storage: u8,
 }
 
 impl LCDStatusRegister {
-    pub fn set_flag(&mut self, f: LCDStatusFlag, t:bool) {
+    pub fn set_flag(&mut self, f: LCDStatusFlag, t: bool) {
         if t {
             self.storage = bytes::set_bit(self.storage, f.get_index());
         } else {
@@ -111,13 +110,13 @@ impl LCDStatusRegister {
         self.storage
     }
 
-    pub fn set(&mut self, v:u8) {
+    pub fn set(&mut self, v: u8) {
         self.storage = v
     }
 }
 
 pub struct LCDLineCount {
-    storage: u8
+    storage: u8,
 }
 
 impl LCDLineCount {
@@ -126,7 +125,7 @@ impl LCDLineCount {
     }
 
     // all writes reset this register
-    pub fn set(&mut self, _:u8) {
+    pub fn set(&mut self, _: u8) {
         self.storage = 0;
     }
 
@@ -140,8 +139,6 @@ impl LCDLineCount {
         }
     }
 }
-
-
 
 pub struct HardwareIO {
     pub lcd_control_register: LCDControlRegister,
@@ -159,25 +156,25 @@ pub struct HardwareIO {
 
 pub fn new() -> HardwareIO {
     HardwareIO {
-        lcd_control_register: LCDControlRegister{storage: 0},
-        lcd_status_register: LCDStatusRegister{storage: 0},
-        lcd_line_count: LCDLineCount{storage: 0},
+        lcd_control_register: LCDControlRegister { storage: 0 },
+        lcd_status_register: LCDStatusRegister { storage: 0 },
+        lcd_line_count: LCDLineCount { storage: 0 },
         background_palette: palette::new(),
         object_palette_1: palette::new(),
         object_palette_2: palette::new(),
-        /* scroll x,y define the position inside of the 256/256 background map that 
+        /* scroll x,y define the position inside of the 256/256 background map that
          * the screen is displaying in
-        * */
+         * */
         lcd_scroll_position_y: 0,
         lcd_scroll_position_x: 0,
         window_position_y: 0,
         window_position_x: 0,
-        storage: [0;128],
+        storage: [0; 128],
     }
 }
 
 impl Device for HardwareIO {
-    fn get(&self, a:u16) -> u8 {
+    fn get(&self, a: u16) -> u8 {
         // println!("HardwareIO: Fetching: {:X}", a);
         match a {
             0x0040 => self.lcd_control_register.get(),
@@ -188,43 +185,27 @@ impl Device for HardwareIO {
             0x0047 => self.background_palette.get(),
             0x0048 => self.object_palette_1.get(),
             0x0049 => self.object_palette_2.get(),
-            0x004A => {
-                self.window_position_y
-            },
-            0x004B => {
-                self.window_position_x
-            },
+            0x004A => self.window_position_y,
+            0x004B => self.window_position_x,
             _ => self.storage[a as usize],
         }
     }
 
-    fn set(&mut self, a:u16, v:u8) {
+    fn set(&mut self, a: u16, v: u8) {
         match a {
             0x0040 => self.lcd_control_register.set(v),
             0x0041 => self.lcd_status_register.set(v),
             0x0042 => {
                 // println!("setting lcd_scroll_position_y to: {:x}", v);
                 self.lcd_scroll_position_y = v
-            },
-            0x0043 => {
-                self.lcd_scroll_position_x = v
-            },
+            }
+            0x0043 => self.lcd_scroll_position_x = v,
             0x0044 => panic!("lcd line count is R/O"),
-            0x0047 => {
-                self.background_palette.set(v)
-            },
-            0x0048 => {
-                self.object_palette_1.set(v)
-            },
-            0x0049 => {
-                self.object_palette_2.set(v)
-            },
-            0x004A => {
-                self.window_position_y = v
-            },
-            0x004B => {
-                self.window_position_x = v
-            },
+            0x0047 => self.background_palette.set(v),
+            0x0048 => self.object_palette_1.set(v),
+            0x0049 => self.object_palette_2.set(v),
+            0x004A => self.window_position_y = v,
+            0x004B => self.window_position_x = v,
             _ => self.storage[a as usize] = v,
         }
     }

@@ -1,3 +1,3 @@
 use palette;
 
-pub type Framebuffer = [palette::Shade;23040];
+pub type Framebuffer = [palette::Shade; 23040];

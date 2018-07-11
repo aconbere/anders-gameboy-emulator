@@ -1,10 +1,10 @@
-pub mod not_implemented;
-pub mod vram;
-pub mod hardware_io;
 pub mod cartridge;
-pub mod zero_page;
+pub mod hardware_io;
 pub mod interrupt;
+pub mod not_implemented;
 pub mod ram_bank;
+pub mod vram;
+pub mod zero_page;
 
 #[derive(Debug)]
 pub enum Kind {
@@ -27,7 +27,7 @@ pub enum Kind {
     InterruptEnableFlag,
 }
 
-pub fn get_kind(address:u16) -> Kind {
+pub fn get_kind(address: u16) -> Kind {
     match address {
         0x0000...0x00FF => Kind::RestartAndInterrupt,
 
@@ -61,7 +61,6 @@ pub fn get_kind(address:u16) -> Kind {
 }
 
 pub trait Device {
-    fn get(&self, a:u16) -> u8;
-    fn set(&mut self, a:u16, v:u8);
+    fn get(&self, a: u16) -> u8;
+    fn set(&mut self, a: u16, v: u8);
 }
-

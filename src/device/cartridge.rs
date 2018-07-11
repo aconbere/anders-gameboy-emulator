@@ -10,13 +10,13 @@ pub enum States {
 }
 
 pub struct Cartridge {
-    cartridge: [u8;32767],
-    boot_rom: [u8;256],
+    cartridge: [u8; 32767],
+    boot_rom: [u8; 256],
     state: States,
 }
 
 impl Device for Cartridge {
-    fn get(&self, a:u16) -> u8 {
+    fn get(&self, a: u16) -> u8 {
         match self.state {
             States::Booting => {
                 if a < 256 {
@@ -24,7 +24,7 @@ impl Device for Cartridge {
                 } else {
                     self.cartridge[a as usize]
                 }
-            },
+            }
             States::Running => {
                 let v = self.cartridge[a as usize];
                 v
@@ -32,7 +32,7 @@ impl Device for Cartridge {
         }
     }
 
-    fn set(&mut self, a:u16, v:u8) {
+    fn set(&mut self, a: u16, v: u8) {
         match self.state {
             States::Booting => {
                 if a < 256 {
@@ -47,26 +47,26 @@ impl Device for Cartridge {
 }
 
 impl Cartridge {
-    pub fn set_state(&mut self, state:States) {
+    pub fn set_state(&mut self, state: States) {
         self.state = state;
     }
 }
 
-pub fn load_cartridge(filename:String) -> [u8;32767] {
+pub fn load_cartridge(filename: String) -> [u8; 32767] {
     let mut f = File::open(filename).unwrap();
-    let mut m = [0;32767];
+    let mut m = [0; 32767];
     f.read(&mut m).unwrap();
     m
 }
 
-pub fn load_boot_rom(filename:String) -> [u8;256] {
+pub fn load_boot_rom(filename: String) -> [u8; 256] {
     let mut f = File::open(filename).unwrap();
-    let mut m = [0;256];
+    let mut m = [0; 256];
     f.read(&mut m).unwrap();
     m
 }
 
-pub fn new(boot_rom:[u8;256], cartridge:[u8;32767]) -> Cartridge {
+pub fn new(boot_rom: [u8; 256], cartridge: [u8; 32767]) -> Cartridge {
     Cartridge {
         boot_rom: boot_rom,
         cartridge: cartridge,

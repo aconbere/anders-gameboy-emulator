@@ -1,13 +1,25 @@
-use ::bytes;
+use bytes;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Registers8 {
-    A,B,C,D,E,F,H,L
+    A,
+    B,
+    C,
+    D,
+    E,
+    F,
+    H,
+    L,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub enum Registers16 {
-    AF,BC,DE,HL,PC,SP
+    AF,
+    BC,
+    DE,
+    HL,
+    PC,
+    SP,
 }
 
 pub enum Flag {
@@ -18,7 +30,7 @@ pub enum Flag {
 }
 
 impl Flag {
-    pub fn get_index(&self) -> u8  {
+    pub fn get_index(&self) -> u8 {
         match self {
             Flag::Z => 7,
             Flag::N => 6,
@@ -45,21 +57,21 @@ impl Flag {
  */
 
 pub struct Registers {
-    a:u8,
-    b:u8,
-    c:u8,
-    d:u8,
-    e:u8,
-    f:u8,
-    h:u8,
-    l:u8,
-    sp:u16,
-    pc:u16,
-    interrupts_enabled:bool,
+    a: u8,
+    b: u8,
+    c: u8,
+    d: u8,
+    e: u8,
+    f: u8,
+    h: u8,
+    l: u8,
+    sp: u16,
+    pc: u16,
+    interrupts_enabled: bool,
 }
 
 impl Registers {
-    pub fn get8(&self, r:&Registers8) -> u8 {
+    pub fn get8(&self, r: &Registers8) -> u8 {
         match r {
             Registers8::A => self.a,
             Registers8::B => self.b,
@@ -68,21 +80,21 @@ impl Registers {
             Registers8::E => self.e,
             Registers8::F => self.f,
             Registers8::H => self.h,
-            Registers8::L => self.l
+            Registers8::L => self.l,
         }
     }
-    pub fn get16(&self, r:&Registers16) -> u16 {
+    pub fn get16(&self, r: &Registers16) -> u16 {
         match r {
             Registers16::AF => bytes::combine(self.a, self.f),
             Registers16::BC => bytes::combine(self.b, self.c),
             Registers16::DE => bytes::combine(self.d, self.e),
             Registers16::HL => bytes::combine(self.h, self.l),
             Registers16::PC => self.pc,
-            Registers16::SP => self.sp
+            Registers16::SP => self.sp,
         }
     }
 
-    pub fn set8(&mut self, r:&Registers8, v:u8) {
+    pub fn set8(&mut self, r: &Registers8, v: u8) {
         match r {
             Registers8::A => self.a = v,
             Registers8::B => self.b = v,
@@ -91,22 +103,22 @@ impl Registers {
             Registers8::E => self.e = v,
             Registers8::F => self.f = v,
             Registers8::H => self.h = v,
-            Registers8::L => self.l = v
+            Registers8::L => self.l = v,
         }
     }
 
-    pub fn set16(&mut self, r:&Registers16, v:u16) {
+    pub fn set16(&mut self, r: &Registers16, v: u16) {
         match r {
             Registers16::AF => self.set_combined(&Registers8::A, &Registers8::F, v),
             Registers16::BC => self.set_combined(&Registers8::B, &Registers8::C, v),
             Registers16::DE => self.set_combined(&Registers8::D, &Registers8::E, v),
             Registers16::HL => self.set_combined(&Registers8::H, &Registers8::L, v),
             Registers16::PC => self.pc = v,
-            Registers16::SP => self.sp = v
+            Registers16::SP => self.sp = v,
         }
     }
 
-    pub fn set_flag(&mut self, f:Flag, check:bool) {
+    pub fn set_flag(&mut self, f: Flag, check: bool) {
         if check {
             self.f = bytes::set_bit(self.f, f.get_index());
         } else {
@@ -114,11 +126,13 @@ impl Registers {
         }
     }
 
-    pub fn get_flag(&mut self, f:Flag) -> bool {
+    pub fn get_flag(&mut self, f: Flag) -> bool {
         bytes::check_bit(self.f, f.get_index())
     }
 
-    pub fn inc_pc(&mut self) { self.pc = self.pc + 1 }
+    pub fn inc_pc(&mut self) {
+        self.pc = self.pc + 1
+    }
 
     pub fn dec_hl(&mut self) {
         let hl = self.get16(&Registers16::HL);
@@ -130,13 +144,13 @@ impl Registers {
         self.set16(&Registers16::HL, hl)
     }
 
-    fn set_combined(&mut self, r1:&Registers8, r2:&Registers8, v:u16) {
+    fn set_combined(&mut self, r1: &Registers8, r2: &Registers8, v: u16) {
         let (high, low) = bytes::split_u16(v);
         self.set8(r1, high);
         self.set8(r2, low);
     }
 
-    pub fn set_interrupts_enabled(&mut self, b:bool) {
+    pub fn set_interrupts_enabled(&mut self, b: bool) {
         self.interrupts_enabled = b
     }
 
@@ -147,8 +161,17 @@ impl Registers {
 
 pub fn new() -> Registers {
     // return Registers{ a:0, b:0, c:0, d:0, e:0, f:0, h:0, l:0, sp:0xFFFE, pc:0x0100 }
-    return Registers{
-        a:0, b:0, c:0, d:0, e:0, f:0, h:0, l:0, sp:0xFFFE, pc:0x0000,
-        interrupts_enabled: false
-    }
+    return Registers {
+        a: 0,
+        b: 0,
+        c: 0,
+        d: 0,
+        e: 0,
+        f: 0,
+        h: 0,
+        l: 0,
+        sp: 0xFFFE,
+        pc: 0x0000,
+        interrupts_enabled: false,
+    };
 }

@@ -1,6 +1,6 @@
-use ::registers;
-use ::instructions;
-use ::mmu;
+use instructions;
+use mmu;
+use registers;
 
 #[derive(PartialEq)]
 pub enum State {
@@ -10,7 +10,7 @@ pub enum State {
 }
 
 pub struct CPU {
-    state: State
+    state: State,
 }
 
 impl CPU {
@@ -18,19 +18,19 @@ impl CPU {
         &mut self,
         instructions: &instructions::Instructions,
         registers: &mut registers::Registers,
-        mmu:&mut mmu::MMU
+        mmu: &mut mmu::MMU,
     ) -> u8 {
         // println!("TICK");
         match self.state {
             State::Running => {
                 let instruction = self.fetch(instructions, registers, mmu, false);
                 self.execute(&instruction, registers, mmu)
-            },
+            }
             State::Prefix => {
                 self.state = State::Running;
                 let instruction = self.fetch(instructions, registers, mmu, true);
                 self.execute(&instruction, registers, mmu)
-            },
+            }
             State::Halted => 0,
         }
     }
@@ -39,8 +39,8 @@ impl CPU {
         &mut self,
         instructions: &instructions::Instructions,
         registers: &mut registers::Registers,
-        mmu:&mut mmu::MMU,
-        prefix:bool
+        mmu: &mut mmu::MMU,
+        prefix: bool,
     ) -> instructions::Op {
         let pc = registers.get16(&registers::Registers16::PC);
 
@@ -59,17 +59,17 @@ impl CPU {
         &mut self,
         instruction: &instructions::Op,
         mut registers: &mut registers::Registers,
-        mmu:&mut mmu::MMU
+        mmu: &mut mmu::MMU,
     ) -> u8 {
         match instruction {
             instructions::Op::PrefixCB => {
                 self.state = State::Prefix;
                 0
-            },
+            }
             instructions::Op::Halt => {
                 self.state = State::Halted;
                 0
-            },
+            }
             _ => {
                 let mut args = Vec::new();
                 for _ in 0..instruction.args() {
@@ -84,7 +84,6 @@ impl CPU {
                 instruction.call(&mut registers, mmu, args)
             }
         }
-
     }
 }
 

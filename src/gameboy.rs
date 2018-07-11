@@ -1,12 +1,12 @@
-use registers;
-use mmu;
 use cpu;
+use device;
+use device::vram;
+use framebuffer;
 use gpu;
 use instructions;
-use framebuffer;
-use device;
+use mmu;
 use palette;
-use device::vram;
+use registers;
 
 pub struct Gameboy {
     registers: registers::Registers,
@@ -17,14 +17,17 @@ pub struct Gameboy {
 }
 
 impl Gameboy {
-    pub fn next_frame(&mut self, framebuffer:&mut framebuffer::Framebuffer) {
+    pub fn next_frame(&mut self, framebuffer: &mut framebuffer::Framebuffer) {
         loop {
             let m = &mut self.mmu;
             let r = &mut self.registers;
 
             let cycles = self.cpu.tick(&self.instructions, r, m);
 
-            if m.hardware_io.lcd_control_register.get_flag(device::hardware_io::LCDControlFlag::LCDDisplayEnable) {
+            if m.hardware_io
+                .lcd_control_register
+                .get_flag(device::hardware_io::LCDControlFlag::LCDDisplayEnable)
+            {
                 self.gpu.tick(m, cycles, framebuffer);
             }
 
@@ -44,31 +47,31 @@ impl Gameboy {
 
     pub fn render_tile(
         &self,
-        framebuffer:&mut framebuffer::Framebuffer,
-        tile:&vram::Tile,
-        palette:&palette::Palette,
-        tx:u8,
-        ty:u8
+        framebuffer: &mut framebuffer::Framebuffer,
+        tile: &vram::Tile,
+        palette: &palette::Palette,
+        tx: u8,
+        ty: u8,
     ) {
         for y in 0..8 {
             for x in 0..8 {
                 let i = (((ty + y) as u16 * 160) + (tx + x) as u16) as usize;
 
-                framebuffer[i] = palette::map_shade(palette, tile.get_pixel(x,y));
+                framebuffer[i] = palette::map_shade(palette, tile.get_pixel(x, y));
             }
         }
     }
 
-    pub fn render_tile_data(&self, framebuffer:&mut framebuffer::Framebuffer) {
+    pub fn render_tile_data(&self, framebuffer: &mut framebuffer::Framebuffer) {
         let palette = self.mmu.hardware_io.background_palette.get_palette();
         for ty in 0..18 {
             for tx in 0..20 {
                 let i = (ty * 20) + tx;
                 if i >= 192 {
-                    return
+                    return;
                 }
                 let tile = self.mmu.tile_data_1.get_tile(i);
-                self.render_tile(framebuffer, &tile, &palette, tx*8, ty*8);
+                self.render_tile(framebuffer, &tile, &palette, tx * 8, ty * 8);
             }
         }
     }

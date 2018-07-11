@@ -1,16 +1,16 @@
 extern crate sdl2;
 
 mod bytes;
-mod registers;
-mod instructions;
 mod cpu;
-mod gpu;
-mod mmu;
 mod device;
 mod display;
-mod gameboy;
-mod palette;
 mod framebuffer;
+mod gameboy;
+mod gpu;
+mod instructions;
+mod mmu;
+mod palette;
+mod registers;
 
 fn main() {
     let mut gameboy = gameboy::new();
