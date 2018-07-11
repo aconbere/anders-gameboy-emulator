@@ -45,6 +45,9 @@ impl Gameboy {
         }
     }
 
+    /* Consider actually just using tile maps here!
+     */
+
     pub fn render_tile(
         &self,
         framebuffer: &mut framebuffer::Framebuffer,
@@ -53,11 +56,14 @@ impl Gameboy {
         tx: u8,
         ty: u8,
     ) {
-        for y in 0..8 {
-            for x in 0..8 {
-                let i = (((ty + y) as u16 * 160) + (tx + x) as u16) as usize;
+        let tile_index_y = (ty as u32) * 8 * 160;
+        let tile_index_x = (tx as u32) * 8;
 
-                framebuffer[i] = palette.map_shades(tile.get_pixel(x, y));
+        for y in 0..8 {
+            let row = tile.get_row(y);
+            for x in 0..8 {
+                let pixel_index = (tile_index_y + tile_index_x) + (y as u32 * 160) + (x as u32);
+                framebuffer[pixel_index as usize] = palette.map_shades(row[x as usize]);
             }
         }
     }
@@ -70,7 +76,7 @@ impl Gameboy {
                     return;
                 }
                 let tile = self.mmu.tile_data_1.get_tile(i);
-                self.render_tile(framebuffer, &tile, &self.mmu.hardware_io.background_palette, tx * 8, ty * 8);
+                self.render_tile(framebuffer, &tile, &self.mmu.hardware_io.background_palette, tx, ty);
             }
         }
     }

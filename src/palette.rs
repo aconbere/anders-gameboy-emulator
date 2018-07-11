@@ -59,8 +59,6 @@ impl Palette {
             get_shade((v & (mask << 4)) >> 4),
             get_shade((v & (mask << 6)) >> 6),
         ];
-
-        println!("set palette: {:?} {:b}", self, v);
     }
 
     pub fn map_shades(&self, i: u8) -> Shade {

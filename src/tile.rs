@@ -17,13 +17,21 @@ pub struct Tile {
  * [2,1,0,0,3,1,3.2]
  */
 impl Tile {
-    pub fn get_pixel(&self, x: u8, y: u8) -> u8 {
+    pub fn get_row(&self, y: u8) -> [u8;8] {
         let y_offset = y * 2;
         let top_byte = self.storage[y_offset as usize];
         let bottom_byte = self.storage[(y_offset + 1) as usize];
-        let tb = bytes::check_bit(top_byte, 7 - x);
-        let bb = bytes::check_bit(bottom_byte, 7 - x);
-        bytes::add_bool(tb, bb)
+
+        let mut arr = [0;8];
+
+        for i in 0..8 {
+            let m = 0x01 << i;
+            let tb = (top_byte & m) >> i;
+            let bb = (bottom_byte & m) >> i;
+            arr[i as usize] = tb + bb;
+        }
+
+        arr
     }
 
     pub fn is_zero(&self) -> bool {

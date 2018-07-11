@@ -54,17 +54,10 @@ fn render_line(mmu: &mmu::MMU, framebuffer: &mut framebuffer::Framebuffer) {
          * which tile it would be
          */
         let x_offset = mmu.hardware_io.lcd_scroll_position_x + i;
-        // println!("Pixel: {} X: {} Y: {}", i, x_offset, y_offset);
 
         // /* This block determines which tile we are on in the 32x32 grid.
         let tile_index_y = y_offset / 8;
         let tile_index_x = x_offset / 8;
-
-        // Try hardcoding this
-        // let tile_index_y = 9;
-        // let tile_index_x = 13;
-
-        // println!("Tile Index: {} {}", tile_index_y, tile_index_x);
 
         let tile_map_select = mmu.hardware_io
             .lcd_control_register
@@ -82,8 +75,6 @@ fn render_line(mmu: &mmu::MMU, framebuffer: &mut framebuffer::Framebuffer) {
             mmu.tile_map_1.get(tile_map_index)
         };
 
-        // println!("Tile Data Index: {}", tile_data_index);
-
         /* We check what tile data set is enabled and use the tile data index found previously to
          * fetch a tile.
          */
@@ -92,8 +83,6 @@ fn render_line(mmu: &mmu::MMU, framebuffer: &mut framebuffer::Framebuffer) {
         } else {
             mmu.tile_data_2.get_tile(tile_data_index)
         };
-
-        // println!("Tile Data: {:?}", tile_data);
 
         /* Once we have the tile we need to know which pixel we're on in the pixel
          * in the x direction if we are on i = 0 then we need to take the x_offset and
@@ -104,18 +93,13 @@ fn render_line(mmu: &mmu::MMU, framebuffer: &mut framebuffer::Framebuffer) {
 
         /* Once we have a tile, we need to actually index into the tile at the right location
          * For each pixel in the tile render the pixel. Now... of course this can't be simple.
-         * */
+         */
 
-        // TODO Optimization
-        // Fetch the two bytes for the row here and then walk through with
-        // bit shifts to get the pixels.
-        for px in pixel_index_x..8 {
-            let pixel = tile.get_pixel(px, pixel_index_y);
-            // get the palette for the tile
-            // render the RGB values into a struct
-            // println!("lcd line count: {}", mmu.hardware_io.lcd_line_count.get());
+        let row = tile.get_row(pixel_index_y);
+
+        for j in (pixel_index_x..8).rev() {
             let frame_index = (mmu.hardware_io.lcd_line_count.get() as u32 * 160) + i as u32;
-            framebuffer[frame_index as usize] = mmu.hardware_io.background_palette.map_shades(pixel);
+            framebuffer[frame_index as usize] = mmu.hardware_io.background_palette.map_shades(row[j as usize]);
             i += 1;
         }
     }
