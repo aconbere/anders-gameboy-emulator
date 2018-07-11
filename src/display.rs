@@ -60,9 +60,6 @@ impl Display {
     }
 
     fn draw(&self, canvas:&mut sdl2::render::Canvas<sdl2::video::Window>, framebuffer:&framebuffer::Framebuffer, scale:u32) {
-        canvas.clear();
-        canvas.present();
-
         for x in 0..160 {
             for y in 0..144 {
                 let i = (y * 160) + x;
@@ -93,7 +90,7 @@ impl Display {
         let video_subsystem = sdl_context.video().unwrap();
         let scale:u32 = 4;
 
-        let window = video_subsystem.window("rust-sdl2 demo: Cursor", 160 * scale, 144 * scale)
+        let window = video_subsystem.window("Gameboy", 160 * scale, 144 * scale)
           .position_centered()
           .build()
           .unwrap();
@@ -112,6 +109,11 @@ impl Display {
         let mut rendered_tile_data = false;
         let mut rendered_tile_map = false;
         let mut rate_limiter = new_rate_limiter();
+
+        let paused_text = {
+            let surface = font.render(&format!("Paused")).blended(Color::RGBA(255, 0, 0, 255)).unwrap();
+            texture_creator.create_texture_from_surface(&surface).unwrap()
+        };
 
         'mainloop: loop {
             match self.state {
@@ -149,9 +151,9 @@ impl Display {
                     }
                 },
                 State::Paused => {
-                    let surface = font.render(&format!("Paused")).blended(Color::RGBA(255, 0, 0, 255)).unwrap();
-                    let texture = texture_creator.create_texture_from_surface(&surface).unwrap();
-                    canvas.copy(&texture, None, Some(target)).unwrap();
+                    canvas.clear();
+                    self.draw(&mut canvas, &framebuffer, scale);
+                    canvas.copy(&paused_text, None, Some(target)).unwrap();
                     canvas.present();
                 }
             }
