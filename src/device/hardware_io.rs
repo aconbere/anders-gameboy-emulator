@@ -203,7 +203,7 @@ impl Device for HardwareIO {
             0x0040 => self.lcd_control_register.set(v),
             0x0041 => self.lcd_status_register.set(v),
             0x0042 => {
-                println!("setting lcd_scroll_position_y to: {:x}", v);
+                // println!("setting lcd_scroll_position_y to: {:x}", v);
                 self.lcd_scroll_position_y = v
             },
             0x0043 => {

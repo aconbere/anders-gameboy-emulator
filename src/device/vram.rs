@@ -86,7 +86,7 @@ pub fn new_tile_data(kind:TileDataKind) -> TileData {
 
 #[derive(Debug)]
 pub struct Tile {
-    storage: [u8;16]
+    pub storage: [u8;16]
 }
 
 /*
@@ -108,5 +108,14 @@ impl Tile {
         let tb = bytes::check_bit(top_byte, x);
         let bb = bytes::check_bit(bottom_byte, x);
         bytes::add_bool(tb, bb)
+    }
+
+    pub fn is_zero(&self) -> bool {
+        for i in self.storage.iter() {
+            if *i != 0 {
+                return true
+            }
+        }
+        false
     }
 }

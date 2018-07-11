@@ -68,7 +68,7 @@ impl Gameboy {
                     return
                 }
                 let tile = self.mmu.tile_data_1.get_tile(i);
-                self.render_tile(framebuffer, &tile, &palette, tx, ty);
+                self.render_tile(framebuffer, &tile, &palette, tx*8, ty*8);
             }
         }
     }

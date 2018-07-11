@@ -79,7 +79,7 @@ impl CPU {
                 }
 
                 let pc = registers.get16(&registers::Registers16::PC);
-                println!("pc: {:X} |\t\t{:?}\t\t| {:X?}", pc, instruction, args);
+                // println!("pc: {:X} |\t\t{:?}\t\t| {:X?}", pc, instruction, args);
 
                 instruction.call(&mut registers, mmu, args)
             }

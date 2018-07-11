@@ -54,7 +54,7 @@ impl PaletteRegister {
     }
 
     pub fn get_palette(&self) -> Palette {
-        println!("palette: {:X}, {:b}", self.storage, self.storage);
+        // println!("palette: {:X}, {:b}", self.storage, self.storage);
         let mask = 0x03;
 
         /* we take our mask 00000011 in binary and we check what the value is
