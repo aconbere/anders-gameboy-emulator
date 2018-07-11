@@ -3,6 +3,7 @@ extern crate sdl2;
 mod bytes;
 mod cpu;
 mod device;
+mod tile;
 mod display;
 mod framebuffer;
 mod gameboy;

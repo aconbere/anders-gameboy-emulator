@@ -1,6 +1,6 @@
 use cpu;
 use device;
-use device::vram;
+use tile;
 use framebuffer;
 use gpu;
 use instructions;
@@ -48,7 +48,7 @@ impl Gameboy {
     pub fn render_tile(
         &self,
         framebuffer: &mut framebuffer::Framebuffer,
-        tile: &vram::Tile,
+        tile: &tile::Tile,
         palette: &palette::Palette,
         tx: u8,
         ty: u8,
@@ -76,7 +76,7 @@ impl Gameboy {
         }
     }
 
-    pub fn get_tile_maps(&self) -> (device::vram::TileMap, device::vram::TileMap) {
+    pub fn get_tile_maps(&self) -> (device::tile_map::TileMap, device::tile_map::TileMap) {
         (self.mmu.tile_map_1.clone(), self.mmu.tile_map_2.clone())
     }
 }

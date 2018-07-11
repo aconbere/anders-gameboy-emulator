@@ -3,7 +3,8 @@ pub mod hardware_io;
 pub mod interrupt;
 pub mod not_implemented;
 pub mod ram_bank;
-pub mod vram;
+pub mod tile_data;
+pub mod tile_map;
 pub mod zero_page;
 
 #[derive(Debug)]

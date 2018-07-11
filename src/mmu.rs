@@ -8,10 +8,10 @@ use device::Device;
 
 pub struct MMU {
     pub cartridge: device::cartridge::Cartridge,
-    pub tile_map_1: device::vram::TileMap,
-    pub tile_map_2: device::vram::TileMap,
-    pub tile_data_1: device::vram::TileData,
-    pub tile_data_2: device::vram::TileData,
+    pub tile_map_1: device::tile_map::TileMap,
+    pub tile_map_2: device::tile_map::TileMap,
+    pub tile_data_1: device::tile_data::TileData,
+    pub tile_data_2: device::tile_data::TileData,
     pub cartridge_ram: device::not_implemented::NotImplemented,
     pub internal_ram_bank_0: device::ram_bank::RamBank,
     pub internal_ram_bank_1: device::ram_bank::RamBank,
@@ -98,10 +98,10 @@ pub fn new() -> MMU {
 
     MMU {
         cartridge: device::cartridge::new(boot_rom, cartridge),
-        tile_map_1: device::vram::new_tile_map(),
-        tile_map_2: device::vram::new_tile_map(),
-        tile_data_1: device::vram::new_tile_data(device::vram::TileDataKind::Bottom),
-        tile_data_2: device::vram::new_tile_data(device::vram::TileDataKind::Top),
+        tile_map_1: device::tile_map::new(),
+        tile_map_2: device::tile_map::new(),
+        tile_data_1: device::tile_data::new(device::tile_data::TileDataKind::Bottom),
+        tile_data_2: device::tile_data::new(device::tile_data::TileDataKind::Top),
         cartridge_ram: device::not_implemented::NotImplemented {},
         internal_ram_bank_0: device::ram_bank::new(),
         internal_ram_bank_1: device::ram_bank::new(),
