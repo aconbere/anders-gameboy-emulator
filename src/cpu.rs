@@ -13,6 +13,31 @@ pub struct CPU {
     state: State,
 }
 
+struct Context {
+    pc: u16,
+    opcode: u8,
+    instruction: instructions::Op,
+    args: Vec<u8>,
+}
+
+fn new_context() -> Context {
+    Context {
+        pc: 0,
+        opcode: 0,
+        instruction: instructions::Op::NotImplemented,
+        args: vec!()
+    }
+}
+
+fn log_context(context: &Context) {
+    let pc_f = format!("{:X}", context.pc);
+    let opcode_f = format!("{:X}", context.opcode);
+    let instruction_f = format!("{:?}", context.instruction);
+    let args_f = format!("{:X?}", context.args);
+
+    println!("pc: {:<4}|{:<4}|{:<20}|{:<10}", pc_f, opcode_f, instruction_f, args_f);
+}
+
 impl CPU {
     pub fn tick(
         &mut self,
@@ -20,16 +45,21 @@ impl CPU {
         registers: &mut registers::Registers,
         mmu: &mut mmu::MMU,
     ) -> u8 {
-        // println!("TICK");
         match self.state {
             State::Running => {
-                let instruction = self.fetch(instructions, registers, mmu, false);
-                self.execute(&instruction, registers, mmu)
+                let mut context = new_context();
+                let instruction = self.fetch(&mut context, instructions, registers, mmu, false);
+                let cycles = self.execute(&mut context, &instruction, registers, mmu);
+                log_context(&context);
+                cycles
             }
             State::Prefix => {
+                let mut context = new_context();
                 self.state = State::Running;
-                let instruction = self.fetch(instructions, registers, mmu, true);
-                self.execute(&instruction, registers, mmu)
+                let instruction = self.fetch(&mut context, instructions, registers, mmu, true);
+                let cycles = self.execute(&mut context, &instruction, registers, mmu);
+                log_context(&context);
+                cycles
             }
             State::Halted => 0,
         }
@@ -37,16 +67,19 @@ impl CPU {
 
     fn fetch(
         &mut self,
+        context: &mut Context,
         instructions: &instructions::Instructions,
         registers: &mut registers::Registers,
         mmu: &mut mmu::MMU,
         prefix: bool,
     ) -> instructions::Op {
         let pc = registers.get16(&registers::Registers16::PC);
-
         let opcode = mmu.get(pc);
+
+        context.pc = pc;
+        context.opcode = opcode;
+
         registers.inc_pc();
-        // println!("\topcode: {:X}", opcode);
 
         if prefix {
             *instructions.get_cb(opcode)
@@ -55,8 +88,9 @@ impl CPU {
         }
     }
 
-    pub fn execute(
+    fn execute(
         &mut self,
+        context: &mut Context,
         instruction: &instructions::Op,
         mut registers: &mut registers::Registers,
         mmu: &mut mmu::MMU,
@@ -78,10 +112,11 @@ impl CPU {
                     registers.inc_pc()
                 }
 
-                let pc = registers.get16(&registers::Registers16::PC);
-                // println!("pc: {:X} |\t\t{:?}\t\t| {:X?}", pc, instruction, args);
+                let cycles = instruction.call(&mut registers, mmu, &args);
 
-                instruction.call(&mut registers, mmu, args)
+                context.instruction = *instruction;
+                context.args = args;
+                cycles
             }
         }
     }

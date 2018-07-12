@@ -26,8 +26,8 @@ impl Device for Cartridge {
                 }
             }
             States::Running => {
-                let v = self.cartridge[a as usize];
-                v
+                println!("Fetching from cartridge: {:X}", a);
+                self.cartridge[a as usize]
             }
         }
     }
@@ -48,6 +48,7 @@ impl Device for Cartridge {
 
 impl Cartridge {
     pub fn set_state(&mut self, state: States) {
+        println!("remapping first 256 bytes");
         self.state = state;
     }
 }
