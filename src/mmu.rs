@@ -2,11 +2,15 @@
  * http://gameboy.mongenel.com/dmg/asmmemmap.html
  */
 
+use std::fs::File;
 use bytes;
 use device;
 use device::Device;
 
 pub struct MMU {
+    boot_rom_loaded: bool,
+
+    pub boot_rom: device::boot_rom::BootRom,
     pub cartridge: device::cartridge::Cartridge,
     pub tile_map_1: device::tile_map::TileMap,
     pub tile_map_2: device::tile_map::TileMap,
@@ -34,8 +38,14 @@ impl MMU {
         let k = device::get_kind(address);
 
         match k {
-            device::Kind::RestartAndInterrupt
-            | device::Kind::CartridgeHeader
+            device::Kind::RestartAndInterrupt => {
+                if self.boot_rom_loaded {
+                    self.boot_rom.get(address)
+                } else {
+                    self.cartridge.get(address)
+                }
+            },
+            device::Kind::CartridgeHeader
             | device::Kind::CartridgeROMBank0
             | device::Kind::CartridgeROMBank1 => self.cartridge.get(address),
 
@@ -60,9 +70,15 @@ impl MMU {
         let k = device::get_kind(address);
 
         match k {
-            device::Kind::RestartAndInterrupt
-            | device::Kind::CartridgeHeader
-            | device::Kind::CartridgeROMBank0
+            device::Kind::RestartAndInterrupt => {
+                if self.boot_rom_loaded {
+                    panic!("can't write to boot rom")
+                } else {
+                    panic!("can't write to cartridge rom")
+                }
+            },
+            device::Kind::CartridgeHeader => panic!("can't write to cartridge header"),
+            device::Kind::CartridgeROMBank0
             | device::Kind::CartridgeROMBank1 => self.cartridge.set(address, v),
 
             device::Kind::TileData1 => self.tile_data_1.set(address - 0x8000, v),
@@ -86,18 +102,11 @@ impl MMU {
     }
 }
 
-pub fn new() -> MMU {
-    let boot_rom = device::cartridge::load_boot_rom(String::from(
-        "/Users/anders/Projects/gb_test_roms/DMG_ROM.bin",
-    ));
-
-    let cartridge = device::cartridge::load_cartridge(
-        String::from("/Users/anders/Projects/gb_test_roms/sheepitup.gb")
-        // String::from("/Users/anders/Projects/gb_test_roms/Mona_And_The_Witch_Hat.gb"),
-    );
-
+pub fn new(mut boot_rom:&mut File, mut game_rom:&mut File) -> MMU {
     MMU {
-        cartridge: device::cartridge::new(boot_rom, cartridge),
+        boot_rom_loaded: true,
+        boot_rom: device::boot_rom::new(&mut boot_rom),
+        cartridge: device::cartridge::new(&mut game_rom),
         tile_map_1: device::tile_map::new(),
         tile_map_2: device::tile_map::new(),
         tile_data_1: device::tile_data::new(device::tile_data::TileDataKind::Bottom),

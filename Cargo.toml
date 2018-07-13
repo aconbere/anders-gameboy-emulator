@@ -1,5 +1,5 @@
 [package]
-name = "gbx"
+name = "anders-gameboy-emulator"
 version = "0.1.0"
 authors = ["Anders Conbere <anders@conbere.org>"]
 
@@ -7,3 +7,5 @@ authors = ["Anders Conbere <anders@conbere.org>"]
   version = "0.31"
   default-features = false
   features = ["ttf"]
+[dependencies.clap]
+  version = "2.32.0"

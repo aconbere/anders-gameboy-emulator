@@ -6,6 +6,7 @@ pub mod ram_bank;
 pub mod tile_data;
 pub mod tile_map;
 pub mod zero_page;
+pub mod boot_rom;
 
 #[derive(Debug)]
 pub enum Kind {
