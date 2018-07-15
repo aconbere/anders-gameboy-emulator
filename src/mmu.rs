@@ -55,8 +55,8 @@ impl MMU {
             device::Kind::TileMap2 => self.tile_map_2.get(address - 0x9C00),
 
             device::Kind::CartridgeRAM => self.cartridge_ram.get(address),
-            device::Kind::InternalRAMBank0 => self.internal_ram_bank_0.get(address),
-            device::Kind::InternalRAMBank1 => self.internal_ram_bank_1.get(address),
+            device::Kind::InternalRAMBank0 => self.internal_ram_bank_0.get(address - 0xC000),
+            device::Kind::InternalRAMBank1 => self.internal_ram_bank_1.get(address - 0xD000),
             device::Kind::EchoRAM => self.echo_ram.get(address),
             device::Kind::ObjectAttributeMemory => self.object_attribute_memory.get(address),
             device::Kind::UnusableMemory => self.unusable_memory.get(address),

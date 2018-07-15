@@ -37,7 +37,7 @@ fn log_context(context: &Context) {
     let instruction_f = format!("{:?}", context.instruction);
     let args_f = format!("{:X?}", context.args);
 
-    println!("pc: {:<4}|{:<4}|{:<20}|{:<10}", pc_f, opcode_f, instruction_f, args_f);
+    println!("pc: {:<4} | {:<4} | {:<20} | {:<10}", pc_f, opcode_f, instruction_f, args_f);
 }
 
 impl CPU {
@@ -51,21 +51,13 @@ impl CPU {
             State::Running => {
                 let mut context = new_context();
                 let instruction = self.fetch(&mut context, instructions, registers, mmu, false);
-                let cycles = self.execute(&mut context, &instruction, registers, mmu);
-                if self.config.debug.log_instructions {
-                    log_context(&context);
-                }
-                cycles
+                self.execute(&mut context, &instruction, registers, mmu)
             }
             State::Prefix => {
                 let mut context = new_context();
                 self.state = State::Running;
                 let instruction = self.fetch(&mut context, instructions, registers, mmu, true);
-                let cycles = self.execute(&mut context, &instruction, registers, mmu);
-                if self.config.debug.log_instructions {
-                    log_context(&context);
-                }
-                cycles
+                self.execute(&mut context, &instruction, registers, mmu)
             }
             State::Halted => 0,
         }
@@ -110,6 +102,10 @@ impl CPU {
                 self.state = State::Halted;
                 0
             }
+            instructions::Op::NotImplemented => {
+                log_context(&context);
+                panic!("Not Implemented");
+            }
             _ => {
                 let mut args = Vec::new();
                 for _ in 0..instruction.args() {
@@ -122,6 +118,9 @@ impl CPU {
 
                 context.instruction = *instruction;
                 context.args = args;
+                if self.config.debug.log_instructions {
+                    log_context(&context);
+                }
                 cycles
             }
         }
