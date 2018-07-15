@@ -27,6 +27,15 @@ pub fn new_debug(
         })
 }
 
+pub fn debug_default() -> Debug {
+    Debug {
+        frame_count: false,
+        log_instructions: false,
+        break_point_pc: None,
+        break_point_frame: None,
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Config {
     pub boot_rom: String,

@@ -85,6 +85,10 @@ impl Gameboy {
     pub fn get_tile_maps(&self) -> (device::tile_map::TileMap, device::tile_map::TileMap) {
         (self.mmu.tile_map_1.clone(), self.mmu.tile_map_2.clone())
     }
+
+    fn get_pc(&self) -> u16 {
+        self.registers.get16(&registers::Registers16::PC)
+    }
 }
 
 pub fn new(config: &config::Config) -> Gameboy {

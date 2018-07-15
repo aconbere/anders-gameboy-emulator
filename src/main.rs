@@ -31,17 +31,21 @@ fn main() {
         )
     ).get_matches();
 
-    let debug_matches = matches.subcommand_matches("debug").unwrap();
-
-    let config = config::new(
-        matches.value_of("BOOT_ROM").unwrap(),
-        matches.value_of("GAME_ROM").unwrap(),
-        config::new_debug(
+    let debug = match matches.subcommand_matches("debug") {
+        Some(debug_matches) => config::new_debug(
             debug_matches.is_present("FRAME_COUNT"),
             debug_matches.is_present("LOG_INSTRUCTIONS"),
             debug_matches.value_of("BREAK_POINT_FRAME"),
             debug_matches.value_of("BREAK_POINT_PC"),
         ).unwrap(),
+
+        None => config::debug_default(),
+    };
+
+    let config = config::new(
+        matches.value_of("BOOT_ROM").unwrap(),
+        matches.value_of("GAME_ROM").unwrap(),
+        debug,
     ).unwrap();
 
     let mut gameboy = gameboy::new(&config);
