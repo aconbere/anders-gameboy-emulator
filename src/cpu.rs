@@ -1,3 +1,4 @@
+use config;
 use instructions;
 use mmu;
 use registers;
@@ -11,6 +12,7 @@ pub enum State {
 
 pub struct CPU {
     state: State,
+    config: config::Config,
 }
 
 struct Context {
@@ -50,7 +52,9 @@ impl CPU {
                 let mut context = new_context();
                 let instruction = self.fetch(&mut context, instructions, registers, mmu, false);
                 let cycles = self.execute(&mut context, &instruction, registers, mmu);
-                log_context(&context);
+                if self.config.debug.log_instructions {
+                    log_context(&context);
+                }
                 cycles
             }
             State::Prefix => {
@@ -58,7 +62,9 @@ impl CPU {
                 self.state = State::Running;
                 let instruction = self.fetch(&mut context, instructions, registers, mmu, true);
                 let cycles = self.execute(&mut context, &instruction, registers, mmu);
-                log_context(&context);
+                if self.config.debug.log_instructions {
+                    log_context(&context);
+                }
                 cycles
             }
             State::Halted => 0,
@@ -122,8 +128,9 @@ impl CPU {
     }
 }
 
-pub fn new() -> CPU {
+pub fn new(config: config::Config) -> CPU {
     CPU {
         state: State::Running,
+        config: config,
     }
 }

@@ -1,6 +1,3 @@
-use std::fs::File;
-use std::path::Path;
-
 extern crate sdl2;
 #[macro_use]
 extern crate clap;
@@ -17,6 +14,7 @@ mod instructions;
 mod mmu;
 mod palette;
 mod registers;
+mod config;
 
 fn main() {
     let matches = clap_app!(anders_gameboy_emulator =>
@@ -25,16 +23,29 @@ fn main() {
         (about: "Emulates a gameboy")
         (@arg BOOT_ROM: --boot_rom +takes_value +required "The file of the boot rom to load")
         (@arg GAME_ROM: --game_rom +takes_value +required "The file of the game rom to load")
-        // (@subcommand debug =>
-        //     (@arg verbose: -v --verbose "Print debug information verbosely")
-        // )
+        (@subcommand debug =>
+            (@arg FRAME_COUNT: --frame_count "Print frame count to display.")
+            (@arg LOG_INSTRUCTIONS: --log_instructions "Print each instruction to stdout.")
+            (@arg BREAK_POINT_FRAME: --break_point_frame +takes_value "Frame to pause instruction at.")
+            (@arg BREAK_POINT_PC: --break_point_pc +takes_value "Frame to pause instruction at.")
+        )
     ).get_matches();
 
-    let mut boot_rom = File::open(Path::new(matches.value_of("BOOT_ROM").unwrap())).unwrap();
-    let mut game_rom = File::open(Path::new(matches.value_of("GAME_ROM").unwrap())).unwrap();
+    let debug_matches = matches.subcommand_matches("debug").unwrap();
 
-    let mut gameboy = gameboy::new(&mut boot_rom, &mut game_rom);
-    let mut display = display::new();
+    let config = config::new(
+        matches.value_of("BOOT_ROM").unwrap(),
+        matches.value_of("GAME_ROM").unwrap(),
+        config::new_debug(
+            debug_matches.is_present("FRAME_COUNT"),
+            debug_matches.is_present("LOG_INSTRUCTIONS"),
+            debug_matches.value_of("BREAK_POINT_FRAME"),
+            debug_matches.value_of("BREAK_POINT_PC"),
+        ).unwrap(),
+    ).unwrap();
+
+    let mut gameboy = gameboy::new(&config);
+    let mut display = display::new(&config);
 
     display.start(&mut gameboy);
 }

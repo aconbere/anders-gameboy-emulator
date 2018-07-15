@@ -6,6 +6,7 @@ use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use std::path::Path;
 
+use config;
 use framebuffer;
 use gameboy;
 use palette;
@@ -43,12 +44,14 @@ enum State {
 pub struct Display {
     frame_count: u32,
     state: State,
+    config: config::Config,
 }
 
-pub fn new() -> Display {
+pub fn new(config: &config::Config) -> Display {
     Display {
         frame_count: 0,
         state: State::Running,
+        config: config.clone(),
     }
 }
 
@@ -138,15 +141,25 @@ impl Display {
                 State::Running => {
                     gameboy.next_frame(&mut framebuffer);
                     self.draw(&mut canvas, &framebuffer, scale);
-                    let surface = font.render(&format!("F:{}", self.frame_count))
-                        .blended(Color::RGBA(255, 0, 0, 255))
-                        .unwrap();
-                    let texture = texture_creator
-                        .create_texture_from_surface(&surface)
-                        .unwrap();
-                    canvas.copy(&texture, None, Some(target)).unwrap();
+                    if self.config.debug.frame_count {
+                        let surface = font.render(&format!("F:{}", self.frame_count))
+                            .blended(Color::RGBA(255, 0, 0, 255))
+                            .unwrap();
+                        let texture = texture_creator
+                            .create_texture_from_surface(&surface)
+                            .unwrap();
+                        canvas.copy(&texture, None, Some(target)).unwrap();
+                    }
                     canvas.present();
                     self.frame_count += 1;
+                    match self.config.debug.break_point_frame {
+                        Some(bk) => {
+                            if bk == self.frame_count {
+                                self.state = State::Paused
+                            }
+                        },
+                        _ => {}
+                    }
                 }
                 State::TileData => {
                     if !rendered_tile_data {

@@ -339,7 +339,7 @@ impl Op {
                     &registers::Registers8::A,
                 );
                 registers.dec_hl();
-                println!("LoadAndDec: HL={:X}", registers.get16(&registers::Registers16::HL));
+                // println!("LoadAndDec: HL={:X}", registers.get16(&registers::Registers16::HL));
                 8
             }
             Op::LoadAndInc => {

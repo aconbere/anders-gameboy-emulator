@@ -1,6 +1,5 @@
-use std::fs::File;
-
 use cpu;
+use config;
 use device;
 use tile;
 use framebuffer;
@@ -88,12 +87,12 @@ impl Gameboy {
     }
 }
 
-pub fn new(boot_rom:&mut File, game_rom:&mut File) -> Gameboy {
+pub fn new(config: &config::Config) -> Gameboy {
     Gameboy {
         registers: registers::new(),
         instructions: instructions::new(),
-        mmu: mmu::new(boot_rom, game_rom),
-        cpu: cpu::new(),
+        mmu: mmu::new(&mut config.read_boot_rom().unwrap(),&mut config.read_game_rom().unwrap()),
+        cpu: cpu::new(config.clone()),
         gpu: gpu::new(),
     }
 }
