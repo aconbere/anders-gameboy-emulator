@@ -17,6 +17,7 @@ pub struct CPU {
 
 struct Context {
     pc: u16,
+    cb: bool,
     opcode: u8,
     instruction: instructions::Op,
     args: Vec<u8>,
@@ -25,6 +26,7 @@ struct Context {
 fn new_context() -> Context {
     Context {
         pc: 0,
+        cb: false,
         opcode: 0,
         instruction: instructions::Op::NotImplemented,
         args: vec!()
@@ -33,7 +35,8 @@ fn new_context() -> Context {
 
 fn log_context(context: &Context) {
     let pc_f = format!("{:X}", context.pc);
-    let opcode_f = format!("{:X}", context.opcode);
+    let cb_f = if context.cb { "CB-" } else { "" };
+    let opcode_f = format!("{}{:X}", cb_f, context.opcode);
     let instruction_f = format!("{:?}", context.instruction);
     let args_f = format!("{:X?}", context.args);
 
@@ -55,7 +58,6 @@ impl CPU {
             }
             State::Prefix => {
                 let mut context = new_context();
-                self.state = State::Running;
                 let instruction = self.fetch(&mut context, instructions, registers, mmu, true);
                 self.execute(&mut context, &instruction, registers, mmu)
             }
@@ -103,6 +105,7 @@ impl CPU {
                 0
             }
             instructions::Op::NotImplemented => {
+                context.cb = self.state == State::Prefix;
                 log_context(&context);
                 panic!("Not Implemented");
             }
@@ -118,9 +121,11 @@ impl CPU {
 
                 context.instruction = *instruction;
                 context.args = args;
+                context.cb = self.state == State::Prefix;
                 if self.config.debug.log_instructions {
                     log_context(&context);
                 }
+                self.state = State::Running;
                 cycles
             }
         }

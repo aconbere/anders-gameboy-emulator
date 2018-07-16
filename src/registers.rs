@@ -126,7 +126,7 @@ impl Registers {
         }
     }
 
-    pub fn get_flag(&mut self, f: Flag) -> bool {
+    pub fn get_flag(&self, f: Flag) -> bool {
         bytes::check_bit(self.f, f.get_index())
     }
 
