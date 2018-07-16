@@ -142,6 +142,7 @@ impl Display {
                     gameboy.next_frame(&mut framebuffer);
                     self.draw(&mut canvas, &framebuffer, scale);
                     if self.config.debug.frame_count {
+                        println!("Frame:{}", self.frame_count);
                         let surface = font.render(&format!("F:{}", self.frame_count))
                             .blended(Color::RGBA(255, 0, 0, 255))
                             .unwrap();

@@ -34,12 +34,6 @@ pub enum CheckFlag {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum CallArgs {
-    CheckFlag(CheckFlag),
-    N,
-}
-
-#[derive(Debug, Clone, Copy)]
 pub enum JrArgs {
     CheckFlag(CheckFlag),
     N,
@@ -103,7 +97,7 @@ pub enum Op {
     JR(JrArgs),
     JP(JpArgs),
     LoadFF00(LoadFF00Targets, LoadFF00Targets),
-    Call(CallArgs, Option<CheckFlag>),
+    Call(Option<CheckFlag>),
     Pop(Registers16),
     Push(Registers16),
     Ret(RetArgs),
@@ -276,7 +270,7 @@ impl Op {
             Op::LoadFF00(_, LoadFF00Targets::N) => 1,
             Op::LoadFF00(LoadFF00Targets::N, _) => 1,
             Op::LoadFF00(_, _) => 0,
-            Op::Call(_, _) => 2,
+            Op::Call(_) => 2,
             Op::Push(_) => 0,
             Op::Pop(_) => 0,
             Op::Ret(_) => 0,
@@ -473,22 +467,30 @@ impl Op {
                 16
             }
 
-            Op::Call(CallArgs::N, f) => {
-                push_stack(registers, mmu, &Registers16::PC);
-
-                let check = f.map_or(true, |flag| check_flags(registers, &flag));
-
-                if !check {
-                    12
-                } else {
-                    registers.set16(
-                        &Registers16::PC,
-                        bytes::combine_little(args[0], args[1]),
-                    );
-                    24
+            Op::Call(f) => {
+                match f {
+                    None => {
+                        push_stack(registers, mmu, &Registers16::PC);
+                        registers.set16(
+                            &Registers16::PC,
+                            bytes::combine_little(args[0], args[1]),
+                        );
+                        24
+                    }
+                    Some(flag) => {
+                        if check_flags(registers, &flag) {
+                            push_stack(registers, mmu, &Registers16::PC);
+                            registers.set16(
+                                &Registers16::PC,
+                                bytes::combine_little(args[0], args[1]),
+                            );
+                            24
+                        } else {
+                            12
+                        }
+                    }
                 }
             }
-            Op::Call(_, _) => panic!("Not Implemented"),
 
             Op::Push(r) => {
                 push_stack(registers, mmu, r);
@@ -645,10 +647,10 @@ impl Op {
             Op::XOR(Destination8::Mem(_)) => panic!("Not Implemented"),
             Op::XOR(Destination8::N) => panic!("Not Implemented"),
 
-            Op::Sbc(Destination8::R(r)) => {
+            Op::Sbc(Destination8::R(_)) => {
                 4
             }
-            Op::Sbc(Destination8::Mem(r)) => {
+            Op::Sbc(Destination8::Mem(_)) => {
                 8
             }
             Op::Sbc(Destination8::N) => {
@@ -688,10 +690,10 @@ impl Op {
                 4
             }
 
-            Op::Adc(Destination8::R(r)) => {
+            Op::Adc(Destination8::R(_)) => {
                 4
             }
-            Op::Adc(Destination8::Mem(r)) => {
+            Op::Adc(Destination8::Mem(_)) => {
                 8
             }
             Op::Adc(Destination8::N) => {
@@ -1061,7 +1063,7 @@ pub fn new() -> Instructions {
     instructions[0x00C1] = Op::Pop(Registers16::BC);
     instructions[0x00C2] = Op::JP(JpArgs::CheckFlag(CheckFlag::NZ));
     instructions[0x00C3] = Op::JP(JpArgs::N);
-    instructions[0x00C4] = Op::Call(CallArgs::N, Some(CheckFlag::NZ));
+    instructions[0x00C4] = Op::Call(Some(CheckFlag::NZ));
     instructions[0x00C5] = Op::Push(Registers16::BC);
     instructions[0x00C6] = Op::Add(Destination8::N);
     // instructions[0x00C7] = RST 00H;
@@ -1069,8 +1071,8 @@ pub fn new() -> Instructions {
     instructions[0x00C9] = Op::Ret(RetArgs::Null);
     instructions[0x00CA] = Op::JP(JpArgs::CheckFlag(CheckFlag::Z));
     instructions[0x00CB] = Op::PrefixCB;
-    instructions[0x00CC] = Op::Call(CallArgs::N, Some(CheckFlag::Z));
-    instructions[0x00CD] = Op::Call(CallArgs::N, None);
+    instructions[0x00CC] = Op::Call(Some(CheckFlag::Z));
+    instructions[0x00CD] = Op::Call(None);
     instructions[0x00CE] = Op::Adc(Destination8::N);
     // instructions[0x00CF] = RST 08H
 
@@ -1078,7 +1080,7 @@ pub fn new() -> Instructions {
     instructions[0x00D1] = Op::Pop(Registers16::DE);
     instructions[0x00D2] = Op::JP(JpArgs::CheckFlag(CheckFlag::NC));
     instructions[0x00D3] = Op::NotImplemented;
-    instructions[0x00D4] = Op::Call(CallArgs::N, Some(CheckFlag::Z));
+    instructions[0x00D4] = Op::Call(Some(CheckFlag::Z));
     instructions[0x00D5] = Op::Push(Registers16::DE);
     instructions[0x00D6] = Op::Sub(Destination8::N);
     // instructions[0x00D7] = RST 10H
@@ -1086,7 +1088,7 @@ pub fn new() -> Instructions {
     // instructions[0x00D9] = RETI
     instructions[0x00DA] = Op::JP(JpArgs::CheckFlag(CheckFlag::C));
     instructions[0x00DB] = Op::NotImplemented;
-    instructions[0x00DC] = Op::Call(CallArgs::N, Some(CheckFlag::C));
+    instructions[0x00DC] = Op::Call(Some(CheckFlag::C));
     instructions[0x00DD] = Op::NotImplemented;
     instructions[0x00DE] = Op::Sbc(Destination8::N);
     // instructions[0x00DF] = RST 18H
