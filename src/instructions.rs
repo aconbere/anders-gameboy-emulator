@@ -1074,22 +1074,22 @@ pub fn new() -> Instructions {
     instructions[0x00CE] = Op::Adc(Destination8::N);
     // instructions[0x00CF] = RST 08H
 
-    // instructions[0x00D0] = 
-    // instructions[0x00D1] = 
-    // instructions[0x00D2] = 
-    // instructions[0x00D3] = 
-    // instructions[0x00D4] = 
-    // instructions[0x00D5] = 
+    instructions[0x00D0] = Op::Ret(RetArgs::CheckFlag(CheckFlag::NC));
+    instructions[0x00D1] = Op::Pop(Registers16::DE);
+    instructions[0x00D2] = Op::JP(JpArgs::CheckFlag(CheckFlag::NC));
+    instructions[0x00D3] = Op::NotImplemented;
+    instructions[0x00D4] = Op::Call(CallArgs::N, Some(CheckFlag::Z));
+    instructions[0x00D5] = Op::Push(Registers16::DE);
     instructions[0x00D6] = Op::Sub(Destination8::N);
-    // instructions[0x00D7] =
-    // instructions[0x00D8] = 
-    // instructions[0x00D9] = 
-    // instructions[0x00DA] = 
-    // instructions[0x00DB] = 
-    // instructions[0x00DC] = 
-    // instructions[0x00DD] = 
-    // instructions[0x00DE] = 
-    // instructions[0x00DF] = 
+    // instructions[0x00D7] = RST 10H
+    instructions[0x00D8] = Op::Ret(RetArgs::CheckFlag(CheckFlag::C));
+    // instructions[0x00D9] = RETI
+    instructions[0x00DA] = Op::JP(JpArgs::CheckFlag(CheckFlag::C));
+    instructions[0x00DB] = Op::NotImplemented;
+    instructions[0x00DC] = Op::Call(CallArgs::N, Some(CheckFlag::C));
+    instructions[0x00DD] = Op::NotImplemented;
+    instructions[0x00DE] = Op::Sbc(Destination8::N);
+    // instructions[0x00DF] = RST 18H
 
     instructions[0x00E0] = Op::LoadFF00(LoadFF00Targets::N, LoadFF00Targets::A);
     instructions[0x00E1] = Op::Pop(Registers16::HL);
