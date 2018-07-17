@@ -1226,20 +1226,20 @@ pub fn new() -> Instructions {
 
     instructions[0x00F0] = Op::LoadFF00(LoadFF00Targets::A, LoadFF00Targets::N);
     instructions[0x00F1] = Op::Pop(Registers16::AF);
-    // instructions[0x00F2] = 
+    instructions[0x00F2] = Op::LoadFF00(LoadFF00Targets::A, LoadFF00Targets::C);
     instructions[0x00F3] = Op::DI;
-    // instructions[0x00F4] = 
+    instructions[0x00F4] = Op::NotImplemented;
     instructions[0x00F5] = Op::Push(Registers16::AF);
-    // instructions[0x00F6] = 
-    // instructions[0x00F7] =
-    // instructions[0x00F8] = 
-    // instructions[0x00F9] = 
+    instructions[0x00F6] = Op::OR(Destination8::N);
+    // instructions[0x00F7] = RST 30H
+    // instructions[0x00F8] = LD HL,SP+r8
+    // instructions[0x00F9] = LD SP,HL
     instructions[0x00FA] = Op::Load8(Destination8::R(Registers8::A), Destination8::N);
-    // instructions[0x00FB] = 
-    // instructions[0x00FC] = 
-    // instructions[0x00FD] = 
+    instructions[0x00FB] = Op::EI;
+    instructions[0x00FC] = Op::NotImplemented;
+    instructions[0x00FD] = Op::NotImplemented;
     instructions[0x00FE] = Op::Compare(Destination8::N);
-    // instructions[0x00FF] = 
+    // instructions[0x00FF] = RST 38H;
 
     let mut cb_instructions = vec![Op::NotImplemented; 256];
     cb_instructions[0x0000] = Op::RLC(Destination8::R(Registers8::B));
