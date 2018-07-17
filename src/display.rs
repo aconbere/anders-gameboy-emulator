@@ -12,8 +12,8 @@ use gameboy;
 use palette;
 
 struct RateLimiter {
-    fps: u32,
     last_ticks: u32,
+    fps: u32,
 }
 
 fn new_rate_limiter() -> RateLimiter {
@@ -142,7 +142,7 @@ impl Display {
                     gameboy.next_frame(&mut framebuffer);
                     self.draw(&mut canvas, &framebuffer, scale);
                     if self.config.debug.frame_count {
-                        println!("Frame:{}", self.frame_count);
+                        // println!("Frame:{}", self.frame_count);
                         let surface = font.render(&format!("F:{}", self.frame_count))
                             .blended(Color::RGBA(255, 0, 0, 255))
                             .unwrap();

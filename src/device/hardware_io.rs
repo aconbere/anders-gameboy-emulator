@@ -52,7 +52,7 @@ impl LCDControlRegister {
     }
 
     pub fn set(&mut self, v: u8) {
-        self.storage = v
+        self.storage = v;
     }
 }
 
@@ -131,7 +131,6 @@ impl LCDLineCount {
 
     pub fn inc(&mut self) {
         let n = self.storage + 1;
-        // println!("new line!: {}", n);
         if n >= 154 {
             self.storage = 0;
         } else {
@@ -175,7 +174,6 @@ pub fn new() -> HardwareIO {
 
 impl Device for HardwareIO {
     fn get(&self, a: u16) -> u8 {
-        // println!("HardwareIO: Fetching: {:X}", a);
         match a {
             0x0040 => self.lcd_control_register.get(),
             0x0041 => self.lcd_status_register.get(),
@@ -196,7 +194,6 @@ impl Device for HardwareIO {
             0x0040 => self.lcd_control_register.set(v),
             0x0041 => self.lcd_status_register.set(v),
             0x0042 => {
-                // println!("setting lcd_scroll_position_y to: {:x}", v);
                 self.lcd_scroll_position_y = v
             }
             0x0043 => self.lcd_scroll_position_x = v,

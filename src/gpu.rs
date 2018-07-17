@@ -25,7 +25,6 @@ pub fn new() -> GPU {
 }
 
 fn render_line(mmu: &mmu::MMU, framebuffer: &mut framebuffer::Framebuffer) {
-    // println!("RENDERING LINE");
     // get our y-offset, this wont change per scan line
     let y_offset = mmu.hardware_io.lcd_line_count.get() + mmu.hardware_io.lcd_scroll_position_y;
 
@@ -106,9 +105,9 @@ fn render_line(mmu: &mmu::MMU, framebuffer: &mut framebuffer::Framebuffer) {
 }
 
 impl GPU {
-    pub fn new_frame_available(&self) -> bool {
-        self.frame_available
-    }
+    // pub fn new_frame_available(&self) -> bool {
+    //     self.frame_available
+    // }
 
     pub fn tick(
         &mut self,
@@ -117,25 +116,20 @@ impl GPU {
         framebuffer: &mut framebuffer::Framebuffer,
     ) {
         self.mode_clock += cycles as u32;
-        // let framebuffer = [0;184320];
 
         match self.mode {
             Mode::OAM => {
-                // println!("GPU: OAM Mode");
                 if self.mode_clock >= 80 {
                     self.mode = Mode::VRAM;
                 }
             }
             Mode::VRAM => {
-                // println!("GPU: VRAM Mode");
                 if self.mode_clock >= 252 {
                     render_line(&*mmu, framebuffer);
-                    // println!("LINE: {}", line);
                     self.mode = Mode::HBlank;
                 }
             }
             Mode::HBlank => {
-                // println!("GPU: HBLANK Mode");
                 if self.mode_clock >= 456 {
                     self.mode_clock -= 456;
 
@@ -150,7 +144,6 @@ impl GPU {
                 }
             }
             Mode::VBlank => {
-                // println!("GPU: VBLANK Mode");
                 self.frame_available = false;
 
                 if self.mode_clock >= 456 {
@@ -159,7 +152,6 @@ impl GPU {
                 }
 
                 if mmu.hardware_io.lcd_line_count.get() == 153 {
-                    // println!("GPU: FRAME COMPLETE");
                     mmu.hardware_io.lcd_line_count.set(0);
                     self.mode = Mode::OAM;
                 }

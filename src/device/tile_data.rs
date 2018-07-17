@@ -16,7 +16,6 @@ impl TileData {
     }
 
     pub fn set(&mut self, a: u16, v: u8) {
-        // println!("Setting tile data {:X} to {:X}", a, v);
         self.storage[a as usize] = v
     }
 }

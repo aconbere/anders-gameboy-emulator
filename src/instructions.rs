@@ -54,12 +54,6 @@ pub enum LoadFF00Targets {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum RetArgs {
-    CheckFlag(CheckFlag),
-    Null,
-}
-
-#[derive(Debug, Clone, Copy)]
 pub enum Op {
     NotImplemented,
     STOP,
@@ -100,15 +94,75 @@ pub enum Op {
     Call(Option<CheckFlag>),
     Pop(Registers16),
     Push(Registers16),
-    Ret(RetArgs),
+    Ret(Option<CheckFlag>),
+    RetI,
     Compare(Destination8),
     Halt,
     PrefixCB,
 
     // CB extras
     BIT(u8, Destination8),
+    RES(u8, Destination8),
+    SET(u8, Destination8),
+    RLC(Destination8),
+    RRC(Destination8),
     RL(Destination8),
+    RR(Destination8),
     SRL(Destination8),
+    SLA(Destination8),
+    SRA(Destination8),
+    SWAP(Destination8),
+}
+
+fn xor(registers: &mut Registers, v:u8) {
+    let a = registers.get8(&Registers8::A);
+    let n = a ^ v;
+
+    registers.set_flag(Flag::N, n == 0);
+    registers.set_flag(Flag::Z, false);
+    registers.set_flag(Flag::H, false);
+    registers.set_flag(Flag::C, false);
+
+    registers.set8(&Registers8::A, n);
+}
+
+fn and(registers: &mut Registers, v:u8) {
+    let a = registers.get8(&Registers8::A);
+    let n = a & v;
+
+    registers.set_flag(Flag::N, n == 0);
+    registers.set_flag(Flag::Z, false);
+    registers.set_flag(Flag::H, false);
+    registers.set_flag(Flag::C, false);
+
+    registers.set8(&Registers8::A, n);
+}
+
+fn ret(registers: &mut Registers, mmu: &mmu::MMU) {
+    let sp = registers.get16(&Registers16::SP);
+    let v = mmu.get16(sp);
+    registers.set16(&Registers16::PC, v);
+    registers.set16(&Registers16::SP, sp + 2);
+}
+
+fn dec8(registers: &mut Registers, v: u8) -> u8 {
+    let n = v.wrapping_sub(1);
+
+    registers.set_flag(Flag::N, true);
+    registers.set_flag(Flag::Z, n == 0);
+    registers.set_flag(Flag::H, v & 0x0F == 0x0F);
+
+    n
+}
+
+fn dec16(registers: &mut Registers, v: u16) -> u16 {
+    let n = v.wrapping_sub(1);
+
+    registers.set_flag(Flag::N, true);
+    registers.set_flag(Flag::Z, n == 0);
+    registers.set_flag(Flag::H, v & 0x0F == 0x0F);
+
+    n
 }
 
 fn jump(registers: &mut Registers, v: u16) {
@@ -274,6 +328,7 @@ impl Op {
             Op::Push(_) => 0,
             Op::Pop(_) => 0,
             Op::Ret(_) => 0,
+            Op::RetI => 0,
             Op::Compare(Destination8::N) => 1,
             Op::Compare(_) => 0,
             Op::RLCA => 0,
@@ -287,9 +342,17 @@ impl Op {
             Op::Sbc(_) => 0,
 
             // cb instructions
-            Op::BIT(_, _) => 0,
+            Op::RLC(_) => 0,
+            Op::RRC(_) => 0,
             Op::RL(_) => 0,
+            Op::RR(_) => 0,
+            Op::SLA(_) => 0,
+            Op::SRA(_) => 0,
+            Op::SWAP(_) => 0,
             Op::SRL(_) => 0,
+            Op::BIT(_, _) => 0,
+            Op::RES(_, _) => 0,
+            Op::SET(_, _) => 0,
         }
     }
 
@@ -433,8 +496,6 @@ impl Op {
                 registers.dec_hl();
                 8
             }
-
-
             Op::JR(JrArgs::CheckFlag(f)) => {
                 if check_flags(registers, f) {
                     jump_relative(registers, args[0] as i8);
@@ -500,14 +561,24 @@ impl Op {
                 pop_stack(registers, mmu, r);
                 12
             }
-            Op::Ret(RetArgs::Null) => {
-                let sp = registers.get16(&Registers16::SP);
-                let v = mmu.get16(sp);
-                registers.set16(&Registers16::PC, v);
-                registers.set16(&Registers16::SP, sp + 2);
+            Op::Ret(None) => {
+                ret(registers, mmu);
                 16
             }
-            Op::Ret(RetArgs::CheckFlag(_)) => panic!("Not Implemented"),
+            Op::Ret(Some(f)) => {
+                if check_flags(registers, f) {
+                    ret(registers, mmu);
+                    20
+                } else {
+                    8
+                }
+
+            }
+            Op::RetI => {
+                ret(registers, mmu);
+                registers.set_interrupts_enabled(true);
+                8
+            }
 
             // ALU Codes
             Op::Inc8(Destination8::R(r)) => {
@@ -516,7 +587,7 @@ impl Op {
 
                 registers.set_flag(Flag::N, false);
                 registers.set_flag(Flag::Z, n == 0);
-                registers.set_flag(Flag::H, v & 0x0F == 0x0F);
+                registers.set_flag(Flag::H, (v & 0x0F) == 0x0F);
 
                 registers.set8(r, n);
                 4
@@ -528,22 +599,22 @@ impl Op {
 
                 registers.set_flag(Flag::N, false);
                 registers.set_flag(Flag::Z, n == 0);
-                registers.set_flag(Flag::H, v & 0x0F == 0x0F);
+                registers.set_flag(Flag::H, (v & 0x0F) == 0x0F);
 
                 mmu.set(a, n);
                 12
             }
             Op::Inc8(Destination8::N) => panic!("Not Implemented"),
+
             Op::Inc16(Destination16::R(r)) => {
                 let v = registers.get16(r);
                 let n = v.wrapping_add(1);
 
                 registers.set_flag(Flag::N, false);
                 registers.set_flag(Flag::Z, n == 0);
-                registers.set_flag(Flag::H, v & 0x00FF == 0x00FF);
+                registers.set_flag(Flag::H, (v & 0x00FF) == 0x00FF);
 
                 registers.set16(r, n);
-                // println!("Inc16: Incrementing {:?} to {:X} - {:X}", r, n, registers.get16(r));
                 8
             }
             Op::Inc16(Destination16::Mem(_)) => panic!("Not Implemented"),
@@ -551,24 +622,15 @@ impl Op {
 
             Op::Dec8(Destination8::R(r)) => {
                 let v = registers.get8(r);
-                let n = v.wrapping_sub(1);
-
-                registers.set_flag(Flag::N, true);
-                registers.set_flag(Flag::Z, n == 0);
-                registers.set_flag(Flag::H, v & 0x0F == 0x0F);
+                let n = dec8(registers, v);
 
                 registers.set8(r, n);
-                // println!("Dec8: Decrementing {:?} to {:X}", r, n);
                 4
             }
             Op::Dec8(Destination8::Mem(r)) => {
                 let a = registers.get16(r);
                 let v = mmu.get(a);
-                let n = v.wrapping_sub(1);
-
-                registers.set_flag(Flag::N, true);
-                registers.set_flag(Flag::Z, n == 0);
-                registers.set_flag(Flag::H, v & 0x0F == 0x0F);
+                let n = dec8(registers, v);
 
                 mmu.set(a, n);
                 12
@@ -576,13 +638,9 @@ impl Op {
             Op::Dec8(Destination8::N) => panic!("Not Implemented"),
             Op::Dec16(Destination16::R(r)) => {
                 let v = registers.get16(r);
-                let n = v.wrapping_sub(1);
+                let n = dec16(registers, v);
 
-                registers.set_flag(Flag::N, false);
-                registers.set_flag(Flag::Z, n == 0);
-                registers.set_flag(Flag::H, v & 0x00FF == 0x00FF);
-
-                registers.set16(r, v + 1);
+                registers.set16(r, n);
                 8
             }
             Op::Dec16(Destination16::Mem(_)) => panic!("Not Implemented"),
@@ -601,19 +659,14 @@ impl Op {
             }
             Op::AND(Destination8::R(r)) => {
                 let v = registers.get8(r);
-                let a = registers.get8(&Registers8::A);
-                let n = a & v;
-
-                registers.set_flag(Flag::N, n == 0);
-                registers.set_flag(Flag::Z, false);
-                registers.set_flag(Flag::H, false);
-                registers.set_flag(Flag::C, false);
-
-                registers.set8(&Registers8::A, n);
+                and(registers,v);
                 4
             }
             Op::AND(Destination8::Mem(_)) => panic!("Not Implemented"),
-            Op::AND(Destination8::N) => panic!("Not Implemented"),
+            Op::AND(Destination8::N) => {
+                and(registers, args[0]);
+                8
+            }
 
             Op::OR(Destination8::R(r)) => {
                 let v = registers.get8(r);
@@ -633,19 +686,19 @@ impl Op {
 
             Op::XOR(Destination8::R(r)) => {
                 let v = registers.get8(r);
-                let a = registers.get8(&Registers8::A);
-                let n = a ^ v;
-
-                registers.set_flag(Flag::N, n == 0);
-                registers.set_flag(Flag::Z, false);
-                registers.set_flag(Flag::H, false);
-                registers.set_flag(Flag::C, false);
-
-                registers.set8(&Registers8::A, n);
+                xor(registers, v);
                 4
             }
-            Op::XOR(Destination8::Mem(_)) => panic!("Not Implemented"),
-            Op::XOR(Destination8::N) => panic!("Not Implemented"),
+            Op::XOR(Destination8::Mem(r)) => {
+                let m = registers.get16(r);
+                let v = mmu.get(m);
+                xor(registers, v);
+                8
+            }
+            Op::XOR(Destination8::N) => {
+                xor(registers, args[0]);
+                8
+            }
 
             Op::Sbc(Destination8::R(_)) => {
                 4
@@ -787,16 +840,21 @@ impl Op {
 
 
             // Cb instructions
-            Op::BIT(location, Destination8::R(r)) => {
-                let v = registers.get8(r);
-                registers.set_flag(Flag::Z, bytes::check_bit(v, *location));
-                registers.set_flag(Flag::C, false);
-                registers.set_flag(Flag::N, false);
-                registers.set_flag(Flag::H, false);
+            Op::RLC(Destination8::R(r)) => {
                 8
             }
-            Op::BIT(_, Destination8::Mem(_)) => panic!("Not Implemented"),
-            Op::BIT(_, Destination8::N) => panic!("Not Implemented"),
+            Op::RLC(Destination8::Mem(r)) => {
+                16
+            }
+            Op::RLC(Destination8::N) => panic!("Not Implemented"),
+
+            Op::RRC(Destination8::R(r)) => {
+                8
+            }
+            Op::RRC(Destination8::Mem(r)) => {
+                16
+            }
+            Op::RRC(Destination8::N) => panic!("Not Implemented"),
 
             Op::RL(Destination8::R(r)) => {
                 let v = registers.get8(r);
@@ -815,6 +873,38 @@ impl Op {
             Op::RL(Destination8::Mem(_)) => panic!("Not Implemented"),
             Op::RL(Destination8::N) => panic!("Not Implemented"),
 
+            Op::RR(Destination8::R(_r)) => {
+                8
+            }
+            Op::RR(Destination8::Mem(_r)) => {
+                16
+            }
+            Op::RR(Destination8::N) => panic!("Not Implemented"),
+
+            Op::SLA(Destination8::R(_r)) => {
+                8
+            }
+            Op::SLA(Destination8::Mem(_r)) => {
+                16
+            }
+            Op::SLA(Destination8::N) => panic!("Not Implemented"),
+
+            Op::SRA(Destination8::R(_r)) => {
+                8
+            }
+            Op::SRA(Destination8::Mem(_r)) => {
+                16
+            }
+            Op::SRA(Destination8::N) => panic!("Not Implemented"),
+
+            Op::SWAP(Destination8::R(_r)) => {
+                8
+            }
+            Op::SWAP(Destination8::Mem(_r)) => {
+                16
+            }
+            Op::SWAP(Destination8::N) => panic!("Not Implemented"),
+
             Op::SRL(Destination8::R(r)) => {
                 let v = registers.get8(r);
                 let c = registers.get_flag(Flag::C);
@@ -831,6 +921,30 @@ impl Op {
             }
             Op::SRL(Destination8::Mem(_)) => panic!("Not Implemented"),
             Op::SRL(Destination8::N) => panic!("Not Implemented"),
+
+
+            Op::BIT(location, Destination8::R(r)) => {
+                let v = registers.get8(r);
+                registers.set_flag(Flag::Z, bytes::check_bit(v, *location));
+                registers.set_flag(Flag::C, false);
+                registers.set_flag(Flag::N, false);
+                registers.set_flag(Flag::H, false);
+                8
+            }
+            Op::BIT(_, Destination8::Mem(_)) => panic!("Not Implemented"),
+            Op::BIT(_, Destination8::N) => panic!("Not Implemented"),
+
+            Op::RES(_location, Destination8::R(_r)) => {
+                8
+            }
+            Op::RES(_, Destination8::Mem(_)) => panic!("Not Implemented"),
+            Op::RES(_, Destination8::N) => panic!("Not Implemented"),
+
+            Op::SET(_location, Destination8::R(_r)) => {
+                8
+            }
+            Op::SET(_, Destination8::Mem(_)) => panic!("Not Implemented"),
+            Op::SET(_, Destination8::N) => panic!("Not Implemented"),
         }
     }
 }
@@ -1059,7 +1173,7 @@ pub fn new() -> Instructions {
     instructions[0x00BE] = Op::Compare(Destination8::Mem(Registers16::HL));
     instructions[0x00BF] = Op::Compare(Destination8::R(Registers8::A));
 
-    instructions[0x00C0] = Op::Ret(RetArgs::CheckFlag(CheckFlag::NZ));
+    instructions[0x00C0] = Op::Ret(Some(CheckFlag::NZ));
     instructions[0x00C1] = Op::Pop(Registers16::BC);
     instructions[0x00C2] = Op::JP(JpArgs::CheckFlag(CheckFlag::NZ));
     instructions[0x00C3] = Op::JP(JpArgs::N);
@@ -1067,8 +1181,8 @@ pub fn new() -> Instructions {
     instructions[0x00C5] = Op::Push(Registers16::BC);
     instructions[0x00C6] = Op::Add(Destination8::N);
     // instructions[0x00C7] = RST 00H;
-    instructions[0x00C8] = Op::Ret(RetArgs::CheckFlag(CheckFlag::Z));
-    instructions[0x00C9] = Op::Ret(RetArgs::Null);
+    instructions[0x00C8] = Op::Ret(Some(CheckFlag::Z));
+    instructions[0x00C9] = Op::Ret(None);
     instructions[0x00CA] = Op::JP(JpArgs::CheckFlag(CheckFlag::Z));
     instructions[0x00CB] = Op::PrefixCB;
     instructions[0x00CC] = Op::Call(Some(CheckFlag::Z));
@@ -1076,7 +1190,7 @@ pub fn new() -> Instructions {
     instructions[0x00CE] = Op::Adc(Destination8::N);
     // instructions[0x00CF] = RST 08H
 
-    instructions[0x00D0] = Op::Ret(RetArgs::CheckFlag(CheckFlag::NC));
+    instructions[0x00D0] = Op::Ret(Some(CheckFlag::NC));
     instructions[0x00D1] = Op::Pop(Registers16::DE);
     instructions[0x00D2] = Op::JP(JpArgs::CheckFlag(CheckFlag::NC));
     instructions[0x00D3] = Op::NotImplemented;
@@ -1084,7 +1198,7 @@ pub fn new() -> Instructions {
     instructions[0x00D5] = Op::Push(Registers16::DE);
     instructions[0x00D6] = Op::Sub(Destination8::N);
     // instructions[0x00D7] = RST 10H
-    instructions[0x00D8] = Op::Ret(RetArgs::CheckFlag(CheckFlag::C));
+    instructions[0x00D8] = Op::Ret(Some(CheckFlag::C));
     // instructions[0x00D9] = RETI
     instructions[0x00DA] = Op::JP(JpArgs::CheckFlag(CheckFlag::C));
     instructions[0x00DB] = Op::NotImplemented;
@@ -1096,19 +1210,19 @@ pub fn new() -> Instructions {
     instructions[0x00E0] = Op::LoadFF00(LoadFF00Targets::N, LoadFF00Targets::A);
     instructions[0x00E1] = Op::Pop(Registers16::HL);
     instructions[0x00E2] = Op::LoadFF00(LoadFF00Targets::C, LoadFF00Targets::A);
-    // instructions[0x00E3] = 
-    // instructions[0x00E4] = 
+    instructions[0x00E3] = Op::NotImplemented;
+    instructions[0x00E4] = Op::NotImplemented;
     instructions[0x00E5] = Op::Push(Registers16::HL);
-    // instructions[0x00E6] = 
-    // instructions[0x00E7] =
-    // instructions[0x00E8] = 
-    // instructions[0x00E9] = 
+    instructions[0x00E6] = Op::AND(Destination8::N);
+    // instructions[0x00E7] = RST 20H
+    // instructions[0x00E8] = Op::Add16(Add16Args::R(Registers16::SP), Add16Args::N);
+    instructions[0x00E9] = Op::JP(JpArgs::HL);
     instructions[0x00EA] = Op::Load8(Destination8::N, Destination8::R(Registers8::A));
-    // instructions[0x00EB] = 
-    // instructions[0x00EC] = 
-    // instructions[0x00ED] = 
-    // instructions[0x00EE] = 
-    // instructions[0x00EF] = 
+    instructions[0x00EB] = Op::NotImplemented;
+    instructions[0x00EC] = Op::NotImplemented;
+    instructions[0x00ED] = Op::NotImplemented;
+    instructions[0x00EE] = Op::XOR(Destination8::N);
+    // instructions[0x00EF] = RST 28H;
 
     instructions[0x00F0] = Op::LoadFF00(LoadFF00Targets::A, LoadFF00Targets::N);
     instructions[0x00F1] = Op::Pop(Registers16::AF);
@@ -1128,10 +1242,278 @@ pub fn new() -> Instructions {
     // instructions[0x00FF] = 
 
     let mut cb_instructions = vec![Op::NotImplemented; 256];
-    cb_instructions[0x007C] = Op::BIT(7, Destination8::R(Registers8::H));
+    cb_instructions[0x0000] = Op::NotImplemented;
+    cb_instructions[0x0001] = Op::NotImplemented;
+    cb_instructions[0x0002] = Op::NotImplemented;
+    cb_instructions[0x0003] = Op::NotImplemented;
+    cb_instructions[0x0004] = Op::NotImplemented;
+    cb_instructions[0x0005] = Op::NotImplemented;
+    cb_instructions[0x0006] = Op::NotImplemented;
+    cb_instructions[0x0007] = Op::NotImplemented;
+    cb_instructions[0x0008] = Op::NotImplemented;
+    cb_instructions[0x0009] = Op::NotImplemented;
+    cb_instructions[0x000A] = Op::NotImplemented;
+    cb_instructions[0x000B] = Op::NotImplemented;
+    cb_instructions[0x000C] = Op::NotImplemented;
+    cb_instructions[0x000D] = Op::NotImplemented;
+    cb_instructions[0x000E] = Op::NotImplemented;
+    cb_instructions[0x000F] = Op::NotImplemented;
+
+    cb_instructions[0x0010] = Op::NotImplemented;
     cb_instructions[0x0011] = Op::RL(Destination8::R(Registers8::C));
+    cb_instructions[0x0012] = Op::NotImplemented;
+    cb_instructions[0x0013] = Op::NotImplemented;
+    cb_instructions[0x0014] = Op::NotImplemented;
+    cb_instructions[0x0015] = Op::NotImplemented;
+    cb_instructions[0x0016] = Op::NotImplemented;
+    cb_instructions[0x0017] = Op::NotImplemented;
+    cb_instructions[0x0018] = Op::NotImplemented;
+    cb_instructions[0x0019] = Op::NotImplemented;
+    cb_instructions[0x001A] = Op::NotImplemented;
+    cb_instructions[0x001B] = Op::NotImplemented;
+    cb_instructions[0x001C] = Op::NotImplemented;
+    cb_instructions[0x001D] = Op::NotImplemented;
+    cb_instructions[0x001E] = Op::NotImplemented;
+    cb_instructions[0x001F] = Op::NotImplemented;
+
+    cb_instructions[0x0020] = Op::NotImplemented;
+    cb_instructions[0x0021] = Op::NotImplemented;
+    cb_instructions[0x0022] = Op::NotImplemented;
+    cb_instructions[0x0023] = Op::NotImplemented;
+    cb_instructions[0x0024] = Op::NotImplemented;
+    cb_instructions[0x0025] = Op::NotImplemented;
+    cb_instructions[0x0026] = Op::NotImplemented;
+    cb_instructions[0x0027] = Op::NotImplemented;
+    cb_instructions[0x0028] = Op::NotImplemented;
+    cb_instructions[0x0029] = Op::NotImplemented;
+    cb_instructions[0x002A] = Op::NotImplemented;
+    cb_instructions[0x002B] = Op::NotImplemented;
+    cb_instructions[0x002C] = Op::NotImplemented;
+    cb_instructions[0x002D] = Op::NotImplemented;
+    cb_instructions[0x002E] = Op::NotImplemented;
+    cb_instructions[0x002F] = Op::NotImplemented;
+
+    cb_instructions[0x0030] = Op::NotImplemented;
+    cb_instructions[0x0031] = Op::NotImplemented;
+    cb_instructions[0x0032] = Op::NotImplemented;
+    cb_instructions[0x0033] = Op::NotImplemented;
+    cb_instructions[0x0034] = Op::NotImplemented;
+    cb_instructions[0x0035] = Op::NotImplemented;
+    cb_instructions[0x0036] = Op::NotImplemented;
     cb_instructions[0x0037] = Op::LoadAndDec;
+    cb_instructions[0x0038] = Op::NotImplemented;
+    cb_instructions[0x0039] = Op::NotImplemented;
+    cb_instructions[0x003A] = Op::NotImplemented;
+    cb_instructions[0x003B] = Op::NotImplemented;
+    cb_instructions[0x003C] = Op::NotImplemented;
+    cb_instructions[0x003D] = Op::NotImplemented;
+    cb_instructions[0x003E] = Op::NotImplemented;
     cb_instructions[0x003F] = Op::SRL(Destination8::R(Registers8::A));
+
+    cb_instructions[0x0040] = Op::NotImplemented;
+    cb_instructions[0x0041] = Op::NotImplemented;
+    cb_instructions[0x0042] = Op::NotImplemented;
+    cb_instructions[0x0043] = Op::NotImplemented;
+    cb_instructions[0x0044] = Op::NotImplemented;
+    cb_instructions[0x0045] = Op::NotImplemented;
+    cb_instructions[0x0046] = Op::NotImplemented;
+    cb_instructions[0x0047] = Op::NotImplemented;
+    cb_instructions[0x0048] = Op::NotImplemented;
+    cb_instructions[0x0049] = Op::NotImplemented;
+    cb_instructions[0x004A] = Op::NotImplemented;
+    cb_instructions[0x004B] = Op::NotImplemented;
+    cb_instructions[0x004C] = Op::NotImplemented;
+    cb_instructions[0x004D] = Op::NotImplemented;
+    cb_instructions[0x004E] = Op::NotImplemented;
+    cb_instructions[0x004F] = Op::NotImplemented;
+
+    cb_instructions[0x0050] = Op::NotImplemented;
+    cb_instructions[0x0051] = Op::NotImplemented;
+    cb_instructions[0x0052] = Op::NotImplemented;
+    cb_instructions[0x0053] = Op::NotImplemented;
+    cb_instructions[0x0054] = Op::NotImplemented;
+    cb_instructions[0x0055] = Op::NotImplemented;
+    cb_instructions[0x0056] = Op::NotImplemented;
+    cb_instructions[0x0057] = Op::NotImplemented;
+    cb_instructions[0x0058] = Op::NotImplemented;
+    cb_instructions[0x0059] = Op::NotImplemented;
+    cb_instructions[0x005A] = Op::NotImplemented;
+    cb_instructions[0x005B] = Op::NotImplemented;
+    cb_instructions[0x005C] = Op::NotImplemented;
+    cb_instructions[0x005D] = Op::NotImplemented;
+    cb_instructions[0x005E] = Op::NotImplemented;
+    cb_instructions[0x005F] = Op::NotImplemented;
+
+    cb_instructions[0x0060] = Op::NotImplemented;
+    cb_instructions[0x0061] = Op::NotImplemented;
+    cb_instructions[0x0062] = Op::NotImplemented;
+    cb_instructions[0x0063] = Op::NotImplemented;
+    cb_instructions[0x0064] = Op::NotImplemented;
+    cb_instructions[0x0065] = Op::NotImplemented;
+    cb_instructions[0x0066] = Op::NotImplemented;
+    cb_instructions[0x0067] = Op::NotImplemented;
+    cb_instructions[0x0068] = Op::NotImplemented;
+    cb_instructions[0x0069] = Op::NotImplemented;
+    cb_instructions[0x006A] = Op::NotImplemented;
+    cb_instructions[0x006B] = Op::NotImplemented;
+    cb_instructions[0x006C] = Op::NotImplemented;
+    cb_instructions[0x006D] = Op::NotImplemented;
+    cb_instructions[0x006E] = Op::NotImplemented;
+    cb_instructions[0x006F] = Op::NotImplemented;
+
+    cb_instructions[0x0070] = Op::NotImplemented;
+    cb_instructions[0x0071] = Op::NotImplemented;
+    cb_instructions[0x0072] = Op::NotImplemented;
+    cb_instructions[0x0073] = Op::NotImplemented;
+    cb_instructions[0x0074] = Op::NotImplemented;
+    cb_instructions[0x0075] = Op::NotImplemented;
+    cb_instructions[0x0076] = Op::NotImplemented;
+    cb_instructions[0x0077] = Op::NotImplemented;
+    cb_instructions[0x0078] = Op::NotImplemented;
+    cb_instructions[0x0079] = Op::NotImplemented;
+    cb_instructions[0x007A] = Op::NotImplemented;
+    cb_instructions[0x007B] = Op::NotImplemented;
+    cb_instructions[0x007C] = Op::BIT(7, Destination8::R(Registers8::H));
+    cb_instructions[0x007D] = Op::NotImplemented;
+    cb_instructions[0x007E] = Op::NotImplemented;
+    cb_instructions[0x007F] = Op::NotImplemented;
+
+    cb_instructions[0x0080] = Op::NotImplemented;
+    cb_instructions[0x0081] = Op::NotImplemented;
+    cb_instructions[0x0082] = Op::NotImplemented;
+    cb_instructions[0x0083] = Op::NotImplemented;
+    cb_instructions[0x0084] = Op::NotImplemented;
+    cb_instructions[0x0085] = Op::NotImplemented;
+    cb_instructions[0x0086] = Op::NotImplemented;
+    cb_instructions[0x0087] = Op::NotImplemented;
+    cb_instructions[0x0088] = Op::NotImplemented;
+    cb_instructions[0x0089] = Op::NotImplemented;
+    cb_instructions[0x008A] = Op::NotImplemented;
+    cb_instructions[0x008B] = Op::NotImplemented;
+    cb_instructions[0x008C] = Op::NotImplemented;
+    cb_instructions[0x008D] = Op::NotImplemented;
+    cb_instructions[0x008E] = Op::NotImplemented;
+    cb_instructions[0x008F] = Op::NotImplemented;
+
+    cb_instructions[0x0090] = Op::NotImplemented;
+    cb_instructions[0x0091] = Op::NotImplemented;
+    cb_instructions[0x0092] = Op::NotImplemented;
+    cb_instructions[0x0093] = Op::NotImplemented;
+    cb_instructions[0x0094] = Op::NotImplemented;
+    cb_instructions[0x0095] = Op::NotImplemented;
+    cb_instructions[0x0096] = Op::NotImplemented;
+    cb_instructions[0x0097] = Op::NotImplemented;
+    cb_instructions[0x0098] = Op::NotImplemented;
+    cb_instructions[0x0099] = Op::NotImplemented;
+    cb_instructions[0x009A] = Op::NotImplemented;
+    cb_instructions[0x009B] = Op::NotImplemented;
+    cb_instructions[0x009C] = Op::NotImplemented;
+    cb_instructions[0x009D] = Op::NotImplemented;
+    cb_instructions[0x009E] = Op::NotImplemented;
+    cb_instructions[0x009F] = Op::NotImplemented;
+
+    cb_instructions[0x00A0] = Op::NotImplemented;
+    cb_instructions[0x00A1] = Op::NotImplemented;
+    cb_instructions[0x00A2] = Op::NotImplemented;
+    cb_instructions[0x00A3] = Op::NotImplemented;
+    cb_instructions[0x00A4] = Op::NotImplemented;
+    cb_instructions[0x00A5] = Op::NotImplemented;
+    cb_instructions[0x00A6] = Op::NotImplemented;
+    cb_instructions[0x00A7] = Op::NotImplemented;
+    cb_instructions[0x00A8] = Op::NotImplemented;
+    cb_instructions[0x00A9] = Op::NotImplemented;
+    cb_instructions[0x00AA] = Op::NotImplemented;
+    cb_instructions[0x00AB] = Op::NotImplemented;
+    cb_instructions[0x00AC] = Op::NotImplemented;
+    cb_instructions[0x00AD] = Op::NotImplemented;
+    cb_instructions[0x00AE] = Op::NotImplemented;
+    cb_instructions[0x00AF] = Op::NotImplemented;
+
+    cb_instructions[0x00B0] = Op::NotImplemented;
+    cb_instructions[0x00B1] = Op::NotImplemented;
+    cb_instructions[0x00B2] = Op::NotImplemented;
+    cb_instructions[0x00B3] = Op::NotImplemented;
+    cb_instructions[0x00B4] = Op::NotImplemented;
+    cb_instructions[0x00B5] = Op::NotImplemented;
+    cb_instructions[0x00B6] = Op::NotImplemented;
+    cb_instructions[0x00B7] = Op::NotImplemented;
+    cb_instructions[0x00B8] = Op::NotImplemented;
+    cb_instructions[0x00B9] = Op::NotImplemented;
+    cb_instructions[0x00BA] = Op::NotImplemented;
+    cb_instructions[0x00BB] = Op::NotImplemented;
+    cb_instructions[0x00BC] = Op::NotImplemented;
+    cb_instructions[0x00BD] = Op::NotImplemented;
+    cb_instructions[0x00BE] = Op::NotImplemented;
+    cb_instructions[0x00BF] = Op::NotImplemented;
+
+    cb_instructions[0x00C0] = Op::NotImplemented;
+    cb_instructions[0x00C1] = Op::NotImplemented;
+    cb_instructions[0x00C2] = Op::NotImplemented;
+    cb_instructions[0x00C3] = Op::NotImplemented;
+    cb_instructions[0x00C4] = Op::NotImplemented;
+    cb_instructions[0x00C5] = Op::NotImplemented;
+    cb_instructions[0x00C6] = Op::NotImplemented;
+    cb_instructions[0x00C7] = Op::NotImplemented;
+    cb_instructions[0x00C8] = Op::NotImplemented;
+    cb_instructions[0x00C9] = Op::NotImplemented;
+    cb_instructions[0x00CA] = Op::NotImplemented;
+    cb_instructions[0x00CB] = Op::NotImplemented;
+    cb_instructions[0x00CC] = Op::NotImplemented;
+    cb_instructions[0x00CD] = Op::NotImplemented;
+    cb_instructions[0x00CE] = Op::NotImplemented;
+    cb_instructions[0x00CF] = Op::NotImplemented;
+
+    cb_instructions[0x00D0] = Op::NotImplemented;
+    cb_instructions[0x00D1] = Op::NotImplemented;
+    cb_instructions[0x00D2] = Op::NotImplemented;
+    cb_instructions[0x00D3] = Op::NotImplemented;
+    cb_instructions[0x00D4] = Op::NotImplemented;
+    cb_instructions[0x00D5] = Op::NotImplemented;
+    cb_instructions[0x00D6] = Op::NotImplemented;
+    cb_instructions[0x00D7] = Op::NotImplemented;
+    cb_instructions[0x00D8] = Op::NotImplemented;
+    cb_instructions[0x00D9] = Op::NotImplemented;
+    cb_instructions[0x00DA] = Op::NotImplemented;
+    cb_instructions[0x00DB] = Op::NotImplemented;
+    cb_instructions[0x00DC] = Op::NotImplemented;
+    cb_instructions[0x00DD] = Op::NotImplemented;
+    cb_instructions[0x00DE] = Op::NotImplemented;
+    cb_instructions[0x00DF] = Op::NotImplemented;
+
+    cb_instructions[0x00E0] = Op::NotImplemented;
+    cb_instructions[0x00E1] = Op::NotImplemented;
+    cb_instructions[0x00E2] = Op::NotImplemented;
+    cb_instructions[0x00E3] = Op::NotImplemented;
+    cb_instructions[0x00E4] = Op::NotImplemented;
+    cb_instructions[0x00E5] = Op::NotImplemented;
+    cb_instructions[0x00E6] = Op::NotImplemented;
+    cb_instructions[0x00E7] = Op::NotImplemented;
+    cb_instructions[0x00E8] = Op::NotImplemented;
+    cb_instructions[0x00E9] = Op::NotImplemented;
+    cb_instructions[0x00EA] = Op::NotImplemented;
+    cb_instructions[0x00EB] = Op::NotImplemented;
+    cb_instructions[0x00EC] = Op::NotImplemented;
+    cb_instructions[0x00ED] = Op::NotImplemented;
+    cb_instructions[0x00EE] = Op::NotImplemented;
+    cb_instructions[0x00EF] = Op::NotImplemented;
+
+    cb_instructions[0x00F0] = Op::NotImplemented;
+    cb_instructions[0x00F1] = Op::NotImplemented;
+    cb_instructions[0x00F2] = Op::NotImplemented;
+    cb_instructions[0x00F3] = Op::NotImplemented;
+    cb_instructions[0x00F4] = Op::NotImplemented;
+    cb_instructions[0x00F5] = Op::NotImplemented;
+    cb_instructions[0x00F6] = Op::NotImplemented;
+    cb_instructions[0x00F7] = Op::NotImplemented;
+    cb_instructions[0x00F8] = Op::NotImplemented;
+    cb_instructions[0x00F9] = Op::NotImplemented;
+    cb_instructions[0x00FA] = Op::NotImplemented;
+    cb_instructions[0x00FB] = Op::NotImplemented;
+    cb_instructions[0x00FC] = Op::NotImplemented;
+    cb_instructions[0x00FD] = Op::NotImplemented;
+    cb_instructions[0x00FE] = Op::NotImplemented;
+    cb_instructions[0x00FF] = Op::NotImplemented;
+
 
     Instructions {
         instructions: instructions,

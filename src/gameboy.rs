@@ -12,6 +12,7 @@ use registers;
 pub struct Gameboy {
     registers: registers::Registers,
     instructions: instructions::Instructions,
+    cycle_count: u32,
     mmu: mmu::MMU,
     cpu: cpu::CPU,
     gpu: gpu::GPU,
@@ -40,9 +41,15 @@ impl Gameboy {
                 }
             }
 
-            if self.gpu.new_frame_available() {
+            self.cycle_count += cycles as u32;
+            if self.cycle_count >= 70244 {
+                self.cycle_count -= 70244;
                 break;
             }
+
+            // if self.gpu.new_frame_available() {
+            //     break;
+            // }
         }
     }
 
@@ -95,6 +102,7 @@ pub fn new(config: &config::Config) -> Gameboy {
     Gameboy {
         registers: registers::new(),
         instructions: instructions::new(),
+        cycle_count: 0,
         mmu: mmu::new(&mut config.read_boot_rom().unwrap(),&mut config.read_game_rom().unwrap()),
         cpu: cpu::new(config.clone()),
         gpu: gpu::new(),
