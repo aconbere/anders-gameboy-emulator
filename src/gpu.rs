@@ -26,7 +26,7 @@ pub fn new() -> GPU {
 
 fn render_line(mmu: &mmu::MMU, framebuffer: &mut framebuffer::Framebuffer) {
     // get our y-offset, this wont change per scan line
-    let y_offset = mmu.hardware_io.lcd_line_count.get() + mmu.hardware_io.lcd_scroll_position_y;
+    let y_offset = mmu.hardware_io.lcd_line_count.get().wrapping_add(mmu.hardware_io.lcd_scroll_position_y);
 
     /* Fetch the currently active palette
      */
