@@ -15,7 +15,7 @@ pub struct CPU {
     config: config::Config,
 }
 
-struct Context {
+pub struct Context {
     pc: u16,
     cb: bool,
     opcode: u8,
@@ -23,7 +23,7 @@ struct Context {
     args: Vec<u8>,
 }
 
-fn new_context() -> Context {
+pub fn new_context() -> Context {
     Context {
         pc: 0,
         cb: false,
@@ -88,7 +88,7 @@ impl CPU {
         }
     }
 
-    fn execute(
+    pub fn execute(
         &mut self,
         context: &mut Context,
         instruction: &instructions::Op,

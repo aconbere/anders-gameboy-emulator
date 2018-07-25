@@ -1,5 +1,29 @@
 use device::Device;
 
+pub struct Interrupt {
+    pub storage: u8
+}
+
+impl Interrupt {
+    pub fn set(&mut self, v: u8) {
+        self.storage = v;
+    }
+
+    pub fn get_interrupts(&self, enabled:u8) -> Vec<Flags> {
+        let masked = enabled & self.storage;
+
+        let mut flags = vec![];
+
+        for i in 0..5 {
+            if masked & (1 << i) != 0 {
+                flags.push(FLAG_LOOKUP[i]);
+            }
+        }
+
+        flags
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub enum Flags {
     VBlank,

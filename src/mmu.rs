@@ -2,20 +2,23 @@
  * http://gameboy.mongenel.com/dmg/asmmemmap.html
  */
 
-use std::fs::File;
 use bytes;
 use device;
 use device::Device;
+use device::boot_rom;
+use device::cartridge;
+use device::tile_map;
+use device::tile_data;
 
 pub struct MMU {
     boot_rom_loaded: bool,
 
-    pub boot_rom: device::boot_rom::BootRom,
-    pub cartridge: device::cartridge::Cartridge,
-    pub tile_map_1: device::tile_map::TileMap,
-    pub tile_map_2: device::tile_map::TileMap,
-    pub tile_data_1: device::tile_data::TileData,
-    pub tile_data_2: device::tile_data::TileData,
+    pub boot_rom: boot_rom::BootRom,
+    pub cartridge: cartridge::Cartridge,
+    pub tile_map_1: tile_map::TileMap,
+    pub tile_map_2: tile_map::TileMap,
+    pub tile_data_1: tile_data::TileData,
+    pub tile_data_2: tile_data::TileData,
     pub cartridge_ram: device::not_implemented::NotImplemented,
     pub internal_ram_bank_0: device::ram_bank::RamBank,
     pub internal_ram_bank_1: device::ram_bank::RamBank,
@@ -93,7 +96,7 @@ impl MMU {
             device::Kind::ObjectAttributeMemory => self.object_attribute_memory.set(address, v),
             device::Kind::UnusableMemory => self.unusable_memory.set(address, v),
             device::Kind::HardwareIORegisters => match address {
-                0xFF50 => self.cartridge.set_state(device::cartridge::States::Running),
+                0xFF50 => self.cartridge.set_state(cartridge::States::Running),
                 _ => self.hardware_io.set(address - 0xFF00, v),
             },
             device::Kind::ZeroPage => self.zero_page.set(address - 0xFF80, v),
@@ -102,15 +105,15 @@ impl MMU {
     }
 }
 
-pub fn new(mut boot_rom:&mut File, mut game_rom:&mut File) -> MMU {
+pub fn new(boot_rom: boot_rom::BootRom, cartridge: cartridge::Cartridge) -> MMU {
     MMU {
         boot_rom_loaded: true,
-        boot_rom: device::boot_rom::new(&mut boot_rom),
-        cartridge: device::cartridge::new(&mut game_rom),
-        tile_map_1: device::tile_map::new(),
-        tile_map_2: device::tile_map::new(),
-        tile_data_1: device::tile_data::new(device::tile_data::TileDataKind::Bottom),
-        tile_data_2: device::tile_data::new(device::tile_data::TileDataKind::Top),
+        boot_rom: boot_rom,
+        cartridge: cartridge,
+        tile_map_1: tile_map::new(),
+        tile_map_2: tile_map::new(),
+        tile_data_1: tile_data::new(tile_data::TileDataKind::Bottom),
+        tile_data_2: tile_data::new(tile_data::TileDataKind::Top),
         cartridge_ram: device::not_implemented::NotImplemented {},
         internal_ram_bank_0: device::ram_bank::new(),
         internal_ram_bank_1: device::ram_bank::new(),

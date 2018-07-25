@@ -6,6 +6,7 @@ use registers::Registers16;
 use registers::Registers;
 use registers::Flag;
 
+
 #[derive(Debug, Clone, Copy)]
 pub enum Destination8 {
     R(Registers8),
@@ -225,6 +226,20 @@ fn sla(registers:&mut Registers, v: u8) -> u8 {
     out
 }
 
+fn or(registers: &mut Registers, v:u8) -> u8 {
+    let a = registers.get8(&Registers8::A);
+    let n = a | v;
+
+    registers.set_flag(Flag::N, n == 0);
+    registers.set_flag(Flag::Z, false);
+    registers.set_flag(Flag::H, false);
+    registers.set_flag(Flag::C, false);
+
+    registers.set8(&Registers8::A, n);
+
+    n
+}
+
 
 fn xor(registers: &mut Registers, v:u8) {
     let a = registers.get8(&Registers8::A);
@@ -285,18 +300,12 @@ fn jump_relative(registers: &mut Registers, v: i8) {
     let pc = registers.get16(&Registers16::PC);
     let out = bytes::add_unsigned_signed(pc, v);
     registers.set16(&Registers16::PC, out);
-    // println!("jump: PC=({}{})={}", pc, v, out);
 }
 
 fn compare(registers: &mut Registers, v: u8) {
     let a = registers.get8(&Registers8::A);
 
-    // println!("\tCompare: A {:X} to V {:X}", a, v);
     let n = a.wrapping_sub(v);
-
-    if n == 0 {
-        // println!("Compare: ZERO");
-    }
 
     registers.set_flag(Flag::Z, n == 0);
     registers.set_flag(Flag::C, a < v);
@@ -318,7 +327,7 @@ fn sub(registers: &mut Registers, v: u8) {
     let n = a.wrapping_sub(v);
 
     registers.set_flag(Flag::Z, n == 0);
-    registers.set_flag(Flag::C, false);
+    registers.set_flag(Flag::C, n > a);
     registers.set_flag(Flag::N, true);
     registers.set_flag(Flag::H, v & 0x0F == 0x0F);
 
@@ -336,7 +345,7 @@ fn subc(registers: &mut Registers, v: u8) {
     };
 
     registers.set_flag(Flag::Z, n == 0);
-    registers.set_flag(Flag::C, false);
+    registers.set_flag(Flag::C, n > a);
     registers.set_flag(Flag::N, true);
     registers.set_flag(Flag::H, v & 0x0F == 0x0F);
 
@@ -348,7 +357,7 @@ fn add(registers: &mut Registers, v: u8) {
     let n = a.wrapping_add(v);
 
     registers.set_flag(Flag::Z, n == 0);
-    registers.set_flag(Flag::C, false);
+    registers.set_flag(Flag::C, n < a);
     registers.set_flag(Flag::N, false);
     registers.set_flag(Flag::H, v & 0x0F == 0x0F);
 
@@ -366,7 +375,7 @@ fn adc(registers: &mut Registers, v: u8) {
     };
 
     registers.set_flag(Flag::Z, n == 0);
-    registers.set_flag(Flag::C, false);
+    registers.set_flag(Flag::C, n < a);
     registers.set_flag(Flag::N, false);
     registers.set_flag(Flag::H, v & 0x0F == 0x0F);
 
@@ -379,7 +388,7 @@ fn add16(registers: &mut Registers, destination: &Registers16, v: u16) {
     let n = a.wrapping_add(v);
 
     registers.set_flag(Flag::Z, n == 0);
-    registers.set_flag(Flag::C, false);
+    registers.set_flag(Flag::C, n < a);
     registers.set_flag(Flag::N, false);
     registers.set_flag(Flag::H, v & 0x0F == 0x0F);
 
@@ -513,22 +522,28 @@ impl Op {
     ) -> u8 {
         match self {
             Op::NotImplemented => panic!("NotImplemented Instruction"),
-            Op::STOP => 0,
+            Op::STOP => {
+                println!("stopping!");
+                0
+            },
             Op::NOP => 4,
             Op::DI => {
                 registers.set_interrupts_enabled(false);
                 4
             }
             Op::EI => {
+                println!("enabling");
                 registers.set_interrupts_enabled(true);
                 4
             }
-            Op::Halt => 4,
+            Op::Halt => {
+                println!("Halting!");
+                4
+            },
             Op::PrefixCB => 4,
             Op::Load8(Destination8::R(r1), Destination8::R(r2)) => {
                 let v = registers.get8(r2);
                 registers.set8(r1, v);
-                // println!("Load8({:?}, {:?}) {:?}={:X}", r1, r2, r1, registers.get8(r1));
                 4
             }
             Op::Load8(Destination8::R(r1), Destination8::N) => {
@@ -579,7 +594,6 @@ impl Op {
             Op::LoadFF00(LoadFF00Targets::C, LoadFF00Targets::A) => {
                 let c = registers.get8(&Registers8::C) as u16;
                 let a = registers.get8(&Registers8::A);
-                // println!("Load FF00+{:X} with {:X}", c, a);
                 mmu.set(c + 0xFF00, a);
                 8
             }
@@ -592,14 +606,12 @@ impl Op {
             Op::LoadFF00(LoadFF00Targets::A, LoadFF00Targets::N) => {
                 let ma = args[0] as u16;
                 let v = mmu.get(ma + 0xFF00);
-                // println!("LoadFF00: Loading A with {:X}", v);
                 registers.set8(&Registers8::A, v);
                 8
             }
             Op::LoadFF00(LoadFF00Targets::N, LoadFF00Targets::A) => {
                 let a = registers.get8(&Registers8::A);
                 let ma = args[0] as u16;
-                // println!("Load FF00+{:X} with {:X}", ma, a);
                 mmu.set(ma + 0xFF00, a);
                 8
             }
@@ -726,7 +738,7 @@ impl Op {
             Op::RetI => {
                 ret(registers, mmu);
                 registers.set_interrupts_enabled(true);
-                8
+                16
             }
 
             // ALU Codes
@@ -819,18 +831,15 @@ impl Op {
 
             Op::OR(Destination8::R(r)) => {
                 let v = registers.get8(r);
-                let a = registers.get8(&Registers8::A);
-                let n = a | v;
-
-                registers.set_flag(Flag::N, n == 0);
-                registers.set_flag(Flag::Z, false);
-                registers.set_flag(Flag::H, false);
-                registers.set_flag(Flag::C, false);
-
-                registers.set8(&Registers8::A, n);
+                or(registers, v);
                 4
             }
-            Op::OR(Destination8::Mem(_)) => panic!("Not Implemented"),
+            Op::OR(Destination8::Mem(r)) => {
+                let rm = registers.get16(r);
+                let v = mmu.get(rm);
+                or(registers, v);
+                8
+            }
             Op::OR(Destination8::N) => panic!("Not Implemented"),
 
             Op::XOR(Destination8::R(r)) => {
@@ -1179,7 +1188,7 @@ pub fn new() -> Instructions {
     instructions[0x0022] = Op::LoadAndInc;
     instructions[0x0023] = Op::Inc16(Destination16::R(Registers16::HL));
     instructions[0x0024] = Op::Inc8(Destination8::R(Registers8::H));
-    instructions[0x0025] = Op::Dec8(Destination8::R(Registers8::D));
+    instructions[0x0025] = Op::Dec8(Destination8::R(Registers8::H));
     instructions[0x0026] = Op::Load8(Destination8::R(Registers8::H), Destination8::N);
     instructions[0x0027] = Op::DAA;
     instructions[0x0028] = Op::JR(JrArgs::CheckFlag(CheckFlag::Z));
@@ -1696,27 +1705,44 @@ mod tests {
     use super::*;
     use cpu;
     use registers;
+    use device::boot_rom;
+    use device::cartridge;
+    use config;
 
     #[test]
     fn test_reading_gbm() {
         let instructions = new();
         let mut registers = registers::new();
-        let mut mmu = mmu::new();
-        let mut cpu = cpu::new();
+        let mut mmu = mmu::new(boot_rom::zero(), cartridge::zero());
+        let mut cpu = cpu::new(config::zero());
 
-        assert_eq!(12, cpu.tick(&instructions, &mut registers, &mut mmu));
-        assert_eq!(3, registers.get16(&Registers16::PC));
+        assert_eq!(4, cpu.tick(&instructions, &mut registers, &mut mmu));
+        assert_eq!(1, registers.get16(&Registers16::PC));
         assert_eq!(0xFFFE, registers.get16(&Registers16::SP));
     }
 
     #[test]
     fn test_di() {
         let instructions = new();
+        let mut context = cpu::new_context();
         let mut registers = registers::new();
-        let mut mmu = mmu::new();
-        let mut cpu = cpu::new();
+        let mut mmu = mmu::new(boot_rom::zero(), cartridge::zero());
+        let mut cpu = cpu::new(config::zero());
 
-        assert_eq!(cpu.execute(&Op::DI, &mut registers, &mut mmu), 4);
+        assert_eq!(cpu.execute(&mut context, &Op::DI, &mut registers, &mut mmu), 4);
         assert_eq!(registers.get_interrupts_enabled(), false);
+    }
+
+    #[test]
+    fn test_swap() {
+        // This is 11110000 in binary
+        let n = 0xF0;
+
+        let mut registers = registers::new();
+
+        let out = swap(&mut registers, n);
+
+        // 0x0F is 00001111 in binary
+        assert_eq!(out, 0x0F);
     }
 }

@@ -1,6 +1,8 @@
 use bytes;
 use device::Device;
 use palette;
+use device::interrupt::Interrupt;
+use std::str;
 
 pub enum LCDControlFlag {
     LCDDisplayEnable,
@@ -34,14 +36,6 @@ pub struct LCDControlRegister {
 }
 
 impl LCDControlRegister {
-    pub fn set_flag(&mut self, f: LCDControlFlag, t: bool) {
-        if t {
-            self.storage = bytes::set_bit(self.storage, f.get_index());
-        } else {
-            self.storage = bytes::clear_bit(self.storage, f.get_index());
-        }
-    }
-
     pub fn get_flag(&self, f: LCDControlFlag) -> bool {
         let i = f.get_index();
         bytes::check_bit(self.storage, i)
@@ -140,6 +134,7 @@ impl LCDLineCount {
 }
 
 pub struct HardwareIO {
+    pub interrupts: Interrupt,
     pub lcd_control_register: LCDControlRegister,
     pub lcd_status_register: LCDStatusRegister,
     pub lcd_line_count: LCDLineCount,
@@ -155,6 +150,7 @@ pub struct HardwareIO {
 
 pub fn new() -> HardwareIO {
     HardwareIO {
+        interrupts: Interrupt { storage: 0 },
         lcd_control_register: LCDControlRegister { storage: 0 },
         lcd_status_register: LCDStatusRegister { storage: 0 },
         lcd_line_count: LCDLineCount { storage: 0 },
@@ -191,6 +187,17 @@ impl Device for HardwareIO {
 
     fn set(&mut self, a: u16, v: u8) {
         match a {
+            0x0001 => {
+                self.storage[a as usize] = v;
+            }
+            0x0002 => {
+                if v == 0x81 {
+                    print!("{}", self.get(0x0001) as char);
+                }
+            }
+            0x000F => {
+                self.interrupts.set(v);
+            }
             0x0040 => self.lcd_control_register.set(v),
             0x0041 => self.lcd_status_register.set(v),
             0x0042 => {
@@ -205,11 +212,5 @@ impl Device for HardwareIO {
             0x004B => self.window_position_x = v,
             _ => self.storage[a as usize] = v,
         }
-    }
-}
-
-impl HardwareIO {
-    pub fn get_requested_interrupts(&self) -> u8 {
-        self.storage[0x0F]
     }
 }

@@ -9,6 +9,9 @@ use mmu;
 use palette;
 use registers;
 
+use device::boot_rom;
+use device::cartridge;
+
 pub struct Gameboy {
     registers: registers::Registers,
     instructions: instructions::Instructions,
@@ -34,9 +37,10 @@ impl Gameboy {
             }
 
             if r.get_interrupts_enabled() {
-                let requested = m.hardware_io.get_requested_interrupts();
+                println!("ENABLED");
                 let enabled = m.interrupt_enable.get_enabled_interrupts();
-                for i in device::interrupt::flags(enabled, requested) {
+                let interrupts = m.hardware_io.interrupts.get_interrupts(enabled);
+                for i in interrupts {
                     println!("Saw interrupt: {:?}", i);
                 }
             }
@@ -47,9 +51,6 @@ impl Gameboy {
                 break;
             }
 
-            // if self.gpu.new_frame_available() {
-            //     break;
-            // }
         }
     }
 
@@ -99,11 +100,14 @@ impl Gameboy {
 }
 
 pub fn new(config: &config::Config) -> Gameboy {
+    let mut boot_rom = config.read_boot_rom().unwrap();
+    let mut game_rom = config.read_game_rom().unwrap();
+
     Gameboy {
         registers: registers::new(),
         instructions: instructions::new(),
         cycle_count: 0,
-        mmu: mmu::new(&mut config.read_boot_rom().unwrap(),&mut config.read_game_rom().unwrap()),
+        mmu: mmu::new(boot_rom::new(&mut boot_rom), cartridge::new(&mut game_rom)),
         cpu: cpu::new(config.clone()),
         gpu: gpu::new(),
     }

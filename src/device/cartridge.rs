@@ -38,3 +38,10 @@ pub fn new(game_rom: &mut File) -> Cartridge {
         state: States::Booting,
     }
 }
+
+pub fn zero() -> Cartridge {
+    Cartridge{
+        storage: [0;32767],
+        state: States::Booting
+    }
+}

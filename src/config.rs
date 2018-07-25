@@ -77,3 +77,10 @@ pub fn new(
     })
 }
 
+pub fn zero() -> Config {
+    Config {
+        boot_rom: String::from("test"),
+        game_rom: String::from("test"),
+        debug: debug_default(),
+    }
+}

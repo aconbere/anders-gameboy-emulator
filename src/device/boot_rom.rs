@@ -22,3 +22,7 @@ pub fn new (f: &mut File) -> BootRom {
     f.read(&mut m).unwrap();
     BootRom{ storage: m }
 }
+
+pub fn zero() -> BootRom {
+    BootRom{ storage: [0;256] }
+}
