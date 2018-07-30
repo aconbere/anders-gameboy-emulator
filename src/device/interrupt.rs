@@ -1,4 +1,8 @@
 use device::Device;
+use registers::Registers;
+use registers::Registers16;
+use mmu::MMU;
+use instructions;
 
 pub struct Interrupt {
     pub storage: u8
@@ -9,7 +13,7 @@ impl Interrupt {
         self.storage = v;
     }
 
-    pub fn get_interrupts(&self, enabled:u8) -> Vec<Flags> {
+    pub fn get_interrupts(&self, enabled:u8) -> Vec<Flag> {
         let masked = enabled & self.storage;
 
         let mut flags = vec![];
@@ -24,8 +28,32 @@ impl Interrupt {
     }
 }
 
+pub fn handle_interrupt(registers:&mut Registers, mmu:&mut MMU, f:Flag) {
+    instructions::push_stack(registers, mmu, &Registers16::PC);
+    println!("Handling Iterrupt: {:?}", f);
+
+    match f {
+        Flag::VBlank => {
+            instructions::jump(registers, 0x0040);
+        },
+        Flag::LCDStat => {
+            instructions::jump(registers, 0x0048);
+        },
+        Flag::Timer => {
+            instructions::jump(registers, 0x0050);
+        },
+        Flag::Serial => {
+            instructions::jump(registers, 0x0058);
+        },
+        Flag::Joypad => {
+            instructions::jump(registers, 0x0060);
+        },
+    }
+
+}
+
 #[derive(Debug, Clone, Copy)]
-pub enum Flags {
+pub enum Flag {
     VBlank,
     LCDStat,
     Timer,
@@ -33,12 +61,12 @@ pub enum Flags {
     Joypad,
 }
 
-pub static FLAG_LOOKUP: [Flags; 5] = [
-    Flags::VBlank,
-    Flags::LCDStat,
-    Flags::Timer,
-    Flags::Serial,
-    Flags::Joypad,
+pub static FLAG_LOOKUP: [Flag; 5] = [
+    Flag::VBlank,
+    Flag::LCDStat,
+    Flag::Timer,
+    Flag::Serial,
+    Flag::Joypad,
 ];
 
 pub struct Enabled {
@@ -65,7 +93,7 @@ pub fn new_enabled() -> Enabled {
     Enabled { f: 0 }
 }
 
-pub fn flags(enabled: u8, requested: u8) -> Vec<Flags> {
+pub fn flags(enabled: u8, requested: u8) -> Vec<Flag> {
     let masked = enabled & requested;
 
     let mut flags = vec![];

@@ -318,7 +318,7 @@ fn dec16(registers: &mut Registers, v: u16) -> u16 {
     n
 }
 
-fn jump(registers: &mut Registers, v: u16) {
+pub fn jump(registers: &mut Registers, v: u16) {
     registers.set16(&Registers16::PC, v);
 }
 
@@ -434,7 +434,7 @@ fn load_from_memory(
     registers.set8(rv, v);
 }
 
-fn push_stack(
+pub fn push_stack(
     registers: &mut Registers,
     mmu: &mut mmu::MMU,
     r: &Registers16,

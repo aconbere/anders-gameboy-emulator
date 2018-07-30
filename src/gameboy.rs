@@ -11,6 +11,7 @@ use registers;
 
 use device::boot_rom;
 use device::cartridge;
+use device::interrupt;
 
 pub struct Gameboy {
     registers: registers::Registers,
@@ -37,11 +38,12 @@ impl Gameboy {
             }
 
             if r.get_interrupts_enabled() {
-                println!("ENABLED");
                 let enabled = m.interrupt_enable.get_enabled_interrupts();
                 let interrupts = m.hardware_io.interrupts.get_interrupts(enabled);
+
                 for i in interrupts {
-                    println!("Saw interrupt: {:?}", i);
+                    r.set_interrupts_enabled(false);
+                    interrupt::handle_interrupt(r, m, i);
                 }
             }
 
@@ -92,10 +94,6 @@ impl Gameboy {
 
     pub fn get_tile_maps(&self) -> (device::tile_map::TileMap, device::tile_map::TileMap) {
         (self.mmu.tile_map_1.clone(), self.mmu.tile_map_2.clone())
-    }
-
-    fn get_pc(&self) -> u16 {
-        self.registers.get16(&registers::Registers16::PC)
     }
 }
 
