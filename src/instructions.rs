@@ -96,6 +96,7 @@ pub enum Op {
     Push(Registers16),
     Ret(Option<CheckFlag>),
     RetI,
+    RST(RstArgs),
     Compare(Destination8),
     Halt,
     PrefixCB,
@@ -112,6 +113,37 @@ pub enum Op {
     SLA(Destination8),
     SRA(Destination8),
     SWAP(Destination8),
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum RstArgs {
+    H00,
+    H08,
+    H10,
+    H18,
+    H20,
+    H28,
+    H30,
+    H38
+}
+
+fn rst_jump_location(r:&RstArgs) -> u16 {
+    match r {
+        RstArgs::H00 => 0x00,
+        RstArgs::H08 => 0x08,
+        RstArgs::H10 => 0x10,
+        RstArgs::H18 => 0x18,
+        RstArgs::H20 => 0x20,
+        RstArgs::H28 => 0x28,
+        RstArgs::H30 => 0x30,
+        RstArgs::H38 => 0x38,
+    }
+}
+
+fn rst(registers: &mut Registers, mmu: &mut mmu::MMU, r:&RstArgs)  {
+    push_stack(registers, mmu, &Registers16::PC);
+    jump(registers, rst_jump_location(r));
+
 }
 
 fn cpl(registers: &mut Registers, v:u8) -> u8 {
@@ -141,8 +173,6 @@ fn bit(registers:&mut Registers, v:u8, location:u8) -> bool {
     registers.set_flag(Flag::Z, out);
     registers.set_flag(Flag::N, false);
     registers.set_flag(Flag::H, true);
-    // manual says this isn't affected
-    // registers.set_flag(Flag::C, false);
     
     out
 }
@@ -353,7 +383,7 @@ fn sub(registers: &mut Registers, a: u8, v: u8) -> u8 {
 
     registers.set_flag(Flag::Z, n == 0);
     registers.set_flag(Flag::N, true);
-    registers.set_flag(Flag::H, (v & 0x0F) == 0x0F);
+    registers.set_flag(Flag::H, check_half_carry_8_sub(a, v));
     registers.set_flag(Flag::C, n > a);
 
     n
@@ -370,10 +400,22 @@ fn sbc(registers: &mut Registers, a: u8, v: u8) -> u8 {
 
     registers.set_flag(Flag::Z, n == 0);
     registers.set_flag(Flag::N, true);
-    registers.set_flag(Flag::H, (v & 0x0F) == 0x0F);
+    registers.set_flag(Flag::H, check_half_carry_8_sub(a, v));
     registers.set_flag(Flag::C, n > a);
 
     n
+}
+
+fn check_half_carry_8_add(a: u8, b: u8) -> bool {
+    (((a & 0xF) + (b & 0xF)) & 0x10) == 0x10
+}
+
+fn check_half_carry_16_add(a: u16, b: u16) -> bool {
+    (a & 0x0FFF) + (b & 0x0FFF) > 0x0FFF
+}
+
+fn check_half_carry_8_sub(a: u8, b: u8) -> bool {
+    (a & 0xF0) < (b & 0xF0)
 }
 
 fn add(registers: &mut Registers, a: u8, v: u8) -> u8 {
@@ -381,7 +423,7 @@ fn add(registers: &mut Registers, a: u8, v: u8) -> u8 {
 
     registers.set_flag(Flag::Z, out == 0);
     registers.set_flag(Flag::N, false);
-    registers.set_flag(Flag::H, (out & 0x0F) == 0x00);
+    registers.set_flag(Flag::H, check_half_carry_8_add(a,v));
     registers.set_flag(Flag::C, out < a);
 
     out
@@ -398,7 +440,7 @@ fn adc(registers: &mut Registers, a: u8, v: u8) -> u8 {
 
     registers.set_flag(Flag::Z, n == 0);
     registers.set_flag(Flag::N, false);
-    registers.set_flag(Flag::H, (v & 0x0F) == 0x00);
+    registers.set_flag(Flag::H, check_half_carry_8_add(a, v));
     registers.set_flag(Flag::C, n < a);
 
     n
@@ -411,7 +453,7 @@ fn add16(registers: &mut Registers, destination: &Registers16, v: u16) {
 
     registers.set_flag(Flag::Z, n == 0);
     registers.set_flag(Flag::N, false);
-    registers.set_flag(Flag::H, v & 0xFF == 0x00);
+    registers.set_flag(Flag::H, check_half_carry_16_add(a, v));
     registers.set_flag(Flag::C, n < a);
 
     registers.set16(destination, n);
@@ -509,6 +551,7 @@ impl Op {
             Op::Pop(_) => 0,
             Op::Ret(_) => 0,
             Op::RetI => 0,
+            Op::RST(_) => 0,
             Op::Compare(Destination8::N) => 1,
             Op::Compare(_) => 0,
             Op::RLCA => 0,
@@ -750,6 +793,10 @@ impl Op {
                     8
                 }
 
+            }
+            Op::RST(r) => {
+                rst(registers, mmu, r);
+                32
             }
             Op::RetI => {
                 ret(registers, mmu);
@@ -1431,7 +1478,7 @@ pub fn new() -> Instructions {
     instructions[0x00C4] = Op::Call(Some(CheckFlag::NZ));
     instructions[0x00C5] = Op::Push(Registers16::BC);
     instructions[0x00C6] = Op::Add(Destination8::N);
-    // instructions[0x00C7] = RST 00H;
+    instructions[0x00C7] = Op::RST(RstArgs::H00);
     instructions[0x00C8] = Op::Ret(Some(CheckFlag::Z));
     instructions[0x00C9] = Op::Ret(None);
     instructions[0x00CA] = Op::JP(JpArgs::CheckFlag(CheckFlag::Z));
@@ -1439,7 +1486,7 @@ pub fn new() -> Instructions {
     instructions[0x00CC] = Op::Call(Some(CheckFlag::Z));
     instructions[0x00CD] = Op::Call(None);
     instructions[0x00CE] = Op::Adc(Destination8::N);
-    // instructions[0x00CF] = RST 08H
+    instructions[0x00CF] = Op::RST(RstArgs::H08);
 
     instructions[0x00D0] = Op::Ret(Some(CheckFlag::NC));
     instructions[0x00D1] = Op::Pop(Registers16::DE);
@@ -1448,7 +1495,7 @@ pub fn new() -> Instructions {
     instructions[0x00D4] = Op::Call(Some(CheckFlag::Z));
     instructions[0x00D5] = Op::Push(Registers16::DE);
     instructions[0x00D6] = Op::Sub(Destination8::N);
-    // instructions[0x00D7] = RST 10H
+    instructions[0x00D7] = Op::RST(RstArgs::H10);
     instructions[0x00D8] = Op::Ret(Some(CheckFlag::C));
     instructions[0x00D9] = Op::RetI;
     instructions[0x00DA] = Op::JP(JpArgs::CheckFlag(CheckFlag::C));
@@ -1456,7 +1503,7 @@ pub fn new() -> Instructions {
     instructions[0x00DC] = Op::Call(Some(CheckFlag::C));
     instructions[0x00DD] = Op::NotImplemented;
     instructions[0x00DE] = Op::Sbc(Destination8::N);
-    // instructions[0x00DF] = RST 18H
+    instructions[0x00DF] = Op::RST(RstArgs::H18);
 
     instructions[0x00E0] = Op::LoadFF00(LoadFF00Targets::N, LoadFF00Targets::A);
     instructions[0x00E1] = Op::Pop(Registers16::HL);
@@ -1465,7 +1512,7 @@ pub fn new() -> Instructions {
     instructions[0x00E4] = Op::NotImplemented;
     instructions[0x00E5] = Op::Push(Registers16::HL);
     instructions[0x00E6] = Op::AND(Destination8::N);
-    // instructions[0x00E7] = RST 20H
+    instructions[0x00E7] = Op::RST(RstArgs::H20);
     // Note that this instruction actually takes a signed 8bit value
     // instructions[0x00E8] = Op::Add16(Add16Args::R(Registers16::SP), Add16Args::N);
     instructions[0x00E9] = Op::JP(JpArgs::HL);
@@ -1474,7 +1521,7 @@ pub fn new() -> Instructions {
     instructions[0x00EC] = Op::NotImplemented;
     instructions[0x00ED] = Op::NotImplemented;
     instructions[0x00EE] = Op::XOR(Destination8::N);
-    // instructions[0x00EF] = RST 28H;
+    instructions[0x00EF] = Op::RST(RstArgs::H28);
 
     instructions[0x00F0] = Op::LoadFF00(LoadFF00Targets::A, LoadFF00Targets::N);
     instructions[0x00F1] = Op::Pop(Registers16::AF);
@@ -1483,7 +1530,7 @@ pub fn new() -> Instructions {
     instructions[0x00F4] = Op::NotImplemented;
     instructions[0x00F5] = Op::Push(Registers16::AF);
     instructions[0x00F6] = Op::OR(Destination8::N);
-    // instructions[0x00F7] = RST 30H
+    instructions[0x00F7] = Op::RST(RstArgs::H30);
     // instructions[0x00F8] = LD HL,SP+r8
     instructions[0x00F9] = Op::Load16(Destination16::R(Registers16::SP), Destination16::R(Registers16::HL));
     instructions[0x00FA] = Op::Load8(Destination8::R(Registers8::A), Destination8::N);
@@ -1491,7 +1538,7 @@ pub fn new() -> Instructions {
     instructions[0x00FC] = Op::NotImplemented;
     instructions[0x00FD] = Op::NotImplemented;
     instructions[0x00FE] = Op::Compare(Destination8::N);
-    // instructions[0x00FF] = RST 38H;
+    instructions[0x00FF] = Op::RST(RstArgs::H38);
 
     let mut cb_instructions = vec![Op::NotImplemented; 256];
     cb_instructions[0x0000] = Op::RLC(Destination8::R(Registers8::B));
