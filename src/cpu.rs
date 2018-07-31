@@ -107,7 +107,8 @@ impl CPU {
             instructions::Op::NotImplemented => {
                 context.cb = self.state == State::Prefix;
                 log_context(&context);
-                panic!("Not Implemented");
+                // panic!("Not Implemented");
+                0
             }
             _ => {
                 let mut args = Vec::new();

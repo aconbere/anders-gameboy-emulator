@@ -2,7 +2,7 @@ use bytes;
 use device::Device;
 use palette;
 use device::interrupt::Interrupt;
-use std::str;
+use std::io::{self, Write};
 
 pub enum LCDControlFlag {
     LCDDisplayEnable,
@@ -193,6 +193,7 @@ impl Device for HardwareIO {
             0x0002 => {
                 if v == 0x81 {
                     print!("{}", self.get(0x0001) as char);
+                    io::stdout().flush().unwrap();
                 }
             }
             0x000F => {

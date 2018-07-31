@@ -6,7 +6,6 @@ use registers::Registers16;
 use registers::Registers;
 use registers::Flag;
 
-
 #[derive(Debug, Clone, Copy)]
 pub enum Destination8 {
     R(Registers8),
@@ -119,9 +118,9 @@ fn cpl(registers: &mut Registers, v:u8) -> u8 {
     let out = !v;
 
     registers.set_flag(Flag::Z, false);
-    registers.set_flag(Flag::C, false);
     registers.set_flag(Flag::N, true);
     registers.set_flag(Flag::H, true);
+    registers.set_flag(Flag::C, false);
 
     out
 }
@@ -140,9 +139,10 @@ fn bit(registers:&mut Registers, v:u8, location:u8) -> bool {
     let out = bytes::check_bit(v, location);
 
     registers.set_flag(Flag::Z, out);
-    registers.set_flag(Flag::C, false);
     registers.set_flag(Flag::N, false);
-    registers.set_flag(Flag::H, false);
+    registers.set_flag(Flag::H, true);
+    // manual says this isn't affected
+    // registers.set_flag(Flag::C, false);
     
     out
 }
@@ -154,9 +154,9 @@ fn swap(registers:&mut Registers, v: u8) -> u8 {
     let out = high | low;
 
     registers.set_flag(Flag::Z, out == 0);
-    registers.set_flag(Flag::C, false);
     registers.set_flag(Flag::N, false);
     registers.set_flag(Flag::H, false);
+    registers.set_flag(Flag::C, false);
 
     out
 }
@@ -173,9 +173,9 @@ fn sra(registers:&mut Registers, v: u8) -> u8 {
     }
 
     registers.set_flag(Flag::Z, out == 0);
-    registers.set_flag(Flag::C, bytes::check_bit(v, 0));
     registers.set_flag(Flag::N, false);
     registers.set_flag(Flag::H, false);
+    registers.set_flag(Flag::C, bytes::check_bit(v, 0));
 
     out
 }
@@ -186,9 +186,9 @@ fn srl(registers:&mut Registers, v: u8) -> u8 {
     let out = v >> 1;
 
     registers.set_flag(Flag::Z, out == 0);
-    registers.set_flag(Flag::C, bytes::check_bit(v, 0));
     registers.set_flag(Flag::N, false);
     registers.set_flag(Flag::H, false);
+    registers.set_flag(Flag::C, bytes::check_bit(v, 0));
 
     out
 }
@@ -196,12 +196,12 @@ fn srl(registers:&mut Registers, v: u8) -> u8 {
 fn rr(registers: &mut Registers, v: u8) -> u8 {
     let c = registers.get_flag(Flag::C);
 
-    let out = if c { (v >> 1) | 0x00FF } else { v >> 1 };
+    let out = if c { (v >> 1) | 0xFF } else { v >> 1 };
 
-    registers.set_flag(Flag::Z, false);
-    registers.set_flag(Flag::C, bytes::check_bit(v, 0));
+    registers.set_flag(Flag::Z, out == 0);
     registers.set_flag(Flag::N, false);
     registers.set_flag(Flag::H, false);
+    registers.set_flag(Flag::C, bytes::check_bit(v, 0));
 
     out
 }
@@ -211,10 +211,10 @@ fn rr(registers: &mut Registers, v: u8) -> u8 {
 fn rrc(registers: &mut Registers, v: u8) -> u8 {
     let out = v >> 1;
 
-    registers.set_flag(Flag::Z, false);
-    registers.set_flag(Flag::C, bytes::check_bit(v, 0));
+    registers.set_flag(Flag::Z, out == 0);
     registers.set_flag(Flag::N, false);
     registers.set_flag(Flag::H, false);
+    registers.set_flag(Flag::C, bytes::check_bit(v, 0));
 
     out
 }
@@ -225,9 +225,9 @@ fn rlc(registers: &mut Registers, v: u8) -> u8 {
     let out = v << 1;
 
     registers.set_flag(Flag::Z, out == 0);
-    registers.set_flag(Flag::C, bytes::check_bit(v, 7));
     registers.set_flag(Flag::N, false);
     registers.set_flag(Flag::H, false);
+    registers.set_flag(Flag::C, bytes::check_bit(v, 7));
 
     out
 }
@@ -235,12 +235,12 @@ fn rlc(registers: &mut Registers, v: u8) -> u8 {
 fn rl(registers: &mut Registers, v: u8) -> u8 {
     let c = registers.get_flag(Flag::C);
 
-    let out = if c { (v << 1) | 0x0001 } else { v << 1 };
+    let out = if c { (v << 1) | 0x01 } else { v << 1 };
 
     registers.set_flag(Flag::Z, out == 0);
-    registers.set_flag(Flag::C, bytes::check_bit(v, 7));
     registers.set_flag(Flag::N, false);
     registers.set_flag(Flag::H, false);
+    registers.set_flag(Flag::C, bytes::check_bit(v, 7));
 
     out
 }
@@ -251,9 +251,9 @@ fn sla(registers:&mut Registers, v: u8) -> u8 {
     let out = v << 1;
 
     registers.set_flag(Flag::Z, out == 0);
-    registers.set_flag(Flag::C, bytes::check_bit(v, 7));
     registers.set_flag(Flag::N, false);
     registers.set_flag(Flag::H, false);
+    registers.set_flag(Flag::C, bytes::check_bit(v, 7));
 
     out
 }
@@ -262,8 +262,8 @@ fn or(registers: &mut Registers, v:u8) -> u8 {
     let a = registers.get8(&Registers8::A);
     let n = a | v;
 
-    registers.set_flag(Flag::N, n == 0);
-    registers.set_flag(Flag::Z, false);
+    registers.set_flag(Flag::Z, n == 0);
+    registers.set_flag(Flag::N, false);
     registers.set_flag(Flag::H, false);
     registers.set_flag(Flag::C, false);
 
@@ -272,13 +272,12 @@ fn or(registers: &mut Registers, v:u8) -> u8 {
     n
 }
 
-
 fn xor(registers: &mut Registers, v:u8) {
     let a = registers.get8(&Registers8::A);
     let n = a ^ v;
 
-    registers.set_flag(Flag::N, n == 0);
-    registers.set_flag(Flag::Z, false);
+    registers.set_flag(Flag::Z, n == 0);
+    registers.set_flag(Flag::N, false);
     registers.set_flag(Flag::H, false);
     registers.set_flag(Flag::C, false);
 
@@ -289,12 +288,17 @@ fn and(registers: &mut Registers, v:u8) {
     let a = registers.get8(&Registers8::A);
     let n = a & v;
 
-    registers.set_flag(Flag::N, n == 0);
-    registers.set_flag(Flag::Z, false);
+    registers.set_flag(Flag::Z, n == 0);
+    registers.set_flag(Flag::N, false);
     registers.set_flag(Flag::H, true);
     registers.set_flag(Flag::C, false);
 
     registers.set8(&Registers8::A, n);
+}
+
+fn call(registers: &mut Registers, mmu: &mut mmu::MMU, v: u16) {
+    push_stack(registers, mmu, &Registers16::PC);
+    registers.set16( &Registers16::PC, v);
 }
 
 fn ret(registers: &mut Registers, mmu: &mmu::MMU) {
@@ -308,12 +312,13 @@ fn dec8(registers: &mut Registers, v: u8) -> u8 {
     sub(registers, v, 1)
 }
 
-fn dec16(registers: &mut Registers, v: u16) -> u16 {
+fn dec16(_registers: &mut Registers, v: u16) -> u16 {
     let n = v.wrapping_sub(1);
 
-    registers.set_flag(Flag::N, true);
-    registers.set_flag(Flag::Z, n == 0);
-    registers.set_flag(Flag::H, v & 0xFF == 0xFF);
+    // docs say no flag adjusted
+    // registers.set_flag(Flag::N, true);
+    // registers.set_flag(Flag::Z, n == 0);
+    // registers.set_flag(Flag::H, v & 0xFF == 0xFF);
 
     n
 }
@@ -347,14 +352,14 @@ fn sub(registers: &mut Registers, a: u8, v: u8) -> u8 {
     let n = a.wrapping_sub(v);
 
     registers.set_flag(Flag::Z, n == 0);
-    registers.set_flag(Flag::C, n > a);
     registers.set_flag(Flag::N, true);
     registers.set_flag(Flag::H, (v & 0x0F) == 0x0F);
+    registers.set_flag(Flag::C, n > a);
 
     n
 }
 
-fn subc(registers: &mut Registers, a: u8, v: u8) -> u8 {
+fn sbc(registers: &mut Registers, a: u8, v: u8) -> u8 {
     let c = registers.get_flag(Flag::C);
 
     let n = if c {
@@ -364,9 +369,9 @@ fn subc(registers: &mut Registers, a: u8, v: u8) -> u8 {
     };
 
     registers.set_flag(Flag::Z, n == 0);
-    registers.set_flag(Flag::C, n > a);
     registers.set_flag(Flag::N, true);
     registers.set_flag(Flag::H, (v & 0x0F) == 0x0F);
+    registers.set_flag(Flag::C, n > a);
 
     n
 }
@@ -375,9 +380,9 @@ fn add(registers: &mut Registers, a: u8, v: u8) -> u8 {
     let out = a.wrapping_add(v);
 
     registers.set_flag(Flag::Z, out == 0);
-    registers.set_flag(Flag::C, out < a);
     registers.set_flag(Flag::N, false);
     registers.set_flag(Flag::H, (out & 0x0F) == 0x00);
+    registers.set_flag(Flag::C, out < a);
 
     out
 }
@@ -392,9 +397,9 @@ fn adc(registers: &mut Registers, a: u8, v: u8) -> u8 {
     };
 
     registers.set_flag(Flag::Z, n == 0);
-    registers.set_flag(Flag::C, n < a);
     registers.set_flag(Flag::N, false);
     registers.set_flag(Flag::H, (v & 0x0F) == 0x00);
+    registers.set_flag(Flag::C, n < a);
 
     n
 }
@@ -405,9 +410,9 @@ fn add16(registers: &mut Registers, destination: &Registers16, v: u16) {
     let n = a.wrapping_add(v);
 
     registers.set_flag(Flag::Z, n == 0);
-    registers.set_flag(Flag::C, n < a);
     registers.set_flag(Flag::N, false);
     registers.set_flag(Flag::H, v & 0xFF == 0x00);
+    registers.set_flag(Flag::C, n < a);
 
     registers.set16(destination, n);
 }
@@ -538,7 +543,7 @@ impl Op {
         args: &Vec<u8>,
     ) -> u8 {
         match self {
-            Op::NotImplemented => panic!("NotImplemented Instruction"),
+            Op::NotImplemented => 0,
             Op::STOP => {
                 println!("stopping!");
                 4
@@ -549,7 +554,6 @@ impl Op {
                 4
             }
             Op::EI => {
-                println!("enabling");
                 registers.set_interrupts_enabled(true);
                 4
             }
@@ -581,6 +585,12 @@ impl Op {
                 let v = registers.get8(r);
                 mmu.set(a, v);
                 8
+            }
+            Op::Load8(Destination8::Mem(r1), Destination8::N) => {
+                let v = args[0];
+                let rm = registers.get16(r1);
+                mmu.set(rm, v);
+                12
             }
             Op::Load8(_, _) => panic!("Not Implemented"),
 
@@ -706,28 +716,17 @@ impl Op {
                 16
             }
 
-            Op::Call(f) => {
-                match f {
-                    None => {
-                        push_stack(registers, mmu, &Registers16::PC);
-                        registers.set16(
-                            &Registers16::PC,
-                            bytes::combine_little(args[0], args[1]),
-                        );
-                        24
-                    }
-                    Some(flag) => {
-                        if check_flags(registers, &flag) {
-                            push_stack(registers, mmu, &Registers16::PC);
-                            registers.set16(
-                                &Registers16::PC,
-                                bytes::combine_little(args[0], args[1]),
-                            );
-                            24
-                        } else {
-                            12
-                        }
-                    }
+            Op::Call(None) => {
+                call(registers, mmu, bytes::combine_little(args[0], args[1]));
+                24
+            }
+
+            Op::Call(Some(flag)) => {
+                if check_flags(registers, &flag) {
+                    call(registers, mmu, bytes::combine_little(args[0], args[1]));
+                    24
+                } else {
+                    12
                 }
             }
 
@@ -780,10 +779,6 @@ impl Op {
                 let v = registers.get16(r);
                 let n = v.wrapping_add(1);
 
-                registers.set_flag(Flag::N, false);
-                registers.set_flag(Flag::Z, n == 0);
-                registers.set_flag(Flag::H, (v & 0x00FF) == 0x00FF);
-
                 registers.set16(r, n);
                 8
             }
@@ -820,7 +815,11 @@ impl Op {
                 compare(registers, args[0]);
                 8
             }
-            Op::Compare(Destination8::R(_)) => panic!("Not Implemented"),
+            Op::Compare(Destination8::R(r)) => {
+                let v = registers.get8(r);
+                compare(registers, v);
+                4
+            }
             Op::Compare(Destination8::Mem(r)) => {
                 let m = registers.get16(r);
                 let v = mmu.get(m);
@@ -873,7 +872,7 @@ impl Op {
 
                 let v = registers.get8(r);
 
-                let out = subc(registers, a, v);
+                let out = sbc(registers, a, v);
 
                 registers.set8(ra, out);
                 4
@@ -883,7 +882,7 @@ impl Op {
                 let a = registers.get8(ra);
                 let mr = registers.get16(r);
                 let v = mmu.get(mr);
-                let out = subc(registers, a, v);
+                let out = sbc(registers, a, v);
 
                 registers.set8(ra, out);
                 8
@@ -892,7 +891,7 @@ impl Op {
                 let ra = &Registers8::A;
                 let a = registers.get8(ra);
                 let v = args[0];
-                let out = subc(registers, a, v);
+                let out = sbc(registers, a, v);
                 registers.set8(ra, out);
                 4
             }
@@ -1467,6 +1466,7 @@ pub fn new() -> Instructions {
     instructions[0x00E5] = Op::Push(Registers16::HL);
     instructions[0x00E6] = Op::AND(Destination8::N);
     // instructions[0x00E7] = RST 20H
+    // Note that this instruction actually takes a signed 8bit value
     // instructions[0x00E8] = Op::Add16(Add16Args::R(Registers16::SP), Add16Args::N);
     instructions[0x00E9] = Op::JP(JpArgs::HL);
     instructions[0x00EA] = Op::Load8(Destination8::N, Destination8::R(Registers8::A));
@@ -1485,7 +1485,7 @@ pub fn new() -> Instructions {
     instructions[0x00F6] = Op::OR(Destination8::N);
     // instructions[0x00F7] = RST 30H
     // instructions[0x00F8] = LD HL,SP+r8
-    // instructions[0x00F9] = LD SP,HL
+    instructions[0x00F9] = Op::Load16(Destination16::R(Registers16::SP), Destination16::R(Registers16::HL));
     instructions[0x00FA] = Op::Load8(Destination8::R(Registers8::A), Destination8::N);
     instructions[0x00FB] = Op::EI;
     instructions[0x00FC] = Op::NotImplemented;
