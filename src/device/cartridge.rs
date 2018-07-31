@@ -3,15 +3,8 @@ use std::io::Read;
 
 use device::Device;
 
-#[derive(Debug)]
-pub enum States {
-    Booting,
-    Running,
-}
-
 pub struct Cartridge {
     storage: [u8; 32767],
-    state: States,
 }
 
 impl Device for Cartridge {
@@ -25,9 +18,6 @@ impl Device for Cartridge {
 }
 
 impl Cartridge {
-    pub fn set_state(&mut self, state: States) {
-        self.state = state;
-    }
 }
 
 pub fn new(game_rom: &mut File) -> Cartridge {
@@ -35,13 +25,5 @@ pub fn new(game_rom: &mut File) -> Cartridge {
     game_rom.read(&mut m).unwrap();
     Cartridge {
         storage: m,
-        state: States::Booting,
-    }
-}
-
-pub fn zero() -> Cartridge {
-    Cartridge{
-        storage: [0;32767],
-        state: States::Booting
     }
 }

@@ -75,12 +75,12 @@ impl MMU {
         match k {
             device::Kind::RestartAndInterrupt => {
                 if self.boot_rom_loaded {
-                    panic!("can't write to boot rom")
+                    println!("can't write to boot rom address: {:X} value: {:X}", address, v)
                 } else {
-                    panic!("can't write to cartridge rom")
+                    println!("can't write to cartridge rom address: {:X} value: {:X}", address, v)
                 }
             },
-            device::Kind::CartridgeHeader => panic!("can't write to cartridge header"),
+            device::Kind::CartridgeHeader => println!("can't write to cartridge header address: {:X}, value: {:X}", address, v),
             device::Kind::CartridgeROMBank0
             | device::Kind::CartridgeROMBank1 => self.cartridge.set(address, v),
 
@@ -96,7 +96,7 @@ impl MMU {
             device::Kind::ObjectAttributeMemory => self.object_attribute_memory.set(address, v),
             device::Kind::UnusableMemory => self.unusable_memory.set(address, v),
             device::Kind::HardwareIORegisters => match address {
-                0xFF50 => self.cartridge.set_state(cartridge::States::Running),
+                0xFF50 => self.boot_rom_loaded = false,
                 _ => self.hardware_io.set(address - 0xFF00, v),
             },
             device::Kind::ZeroPage => self.zero_page.set(address - 0xFF80, v),
