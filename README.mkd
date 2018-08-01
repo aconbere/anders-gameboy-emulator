@@ -1,1 +1,21 @@
+# Anders Gameboy Emulator
+
+Being written for fun, it's booting now but not running game roms.
+
+## Dependencies
+
+The emulator core is just basic rust, the cli is using the rust clap crate and the display is implemented using the rust sdl2 library. To build you'll need a copy of sdl2 to build against.
+
+* brew install sdl2
 * brew install sdl2_ttf
+
+## Running
+
+Basic use of the emulator can be understood from `cargo run`. A standard invocation might look like this `cargo run -- --boot_rom ../gb_test_roms/DMG_ROM.bin --game_rom ../blarggs-tests/cpu_instrs/source/test.gb` roms are not bundled in this source to avoid any copyright fussyness.
+
+## Debug modes
+
+The debug subcommand offers some debug tools
+
+* `--log_instructions` will output every instruction run to stdout
+* `--frame_count` will render a framecount to the canvas
