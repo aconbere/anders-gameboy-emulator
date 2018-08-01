@@ -11,6 +11,8 @@ use framebuffer;
 use gameboy;
 use palette;
 
+/* Clamp framerate to a specific value.
+ */
 struct RateLimiter {
     last_ticks: u32,
     fps: u32,
@@ -41,6 +43,8 @@ enum State {
     TileMap,
 }
 
+/* Display 
+ */
 pub struct Display {
     frame_count: u32,
     state: State,
@@ -63,6 +67,9 @@ impl Display {
         }
     }
 
+    /* For each pixel in the frambuffer render the palette shade into a rect of a specific color on
+     * the canvas.
+     */
     fn draw(
         &self,
         canvas: &mut sdl2::render::Canvas<sdl2::video::Window>,
@@ -73,14 +80,18 @@ impl Display {
             for y in 0..144 {
                 let i = (y * 160) + x;
                 match framebuffer[i] {
-                    palette::Shade::White => canvas.set_draw_color(Color::RGBA(255, 255, 255, 255)),
+                    palette::Shade::White => {
+                        canvas.set_draw_color(Color::RGBA(255, 255, 255, 255))
+                    }
                     palette::Shade::LightGrey => {
                         canvas.set_draw_color(Color::RGBA(211, 211, 211, 255))
                     }
                     palette::Shade::DarkGrey => {
                         canvas.set_draw_color(Color::RGBA(169, 169, 169, 255))
                     }
-                    palette::Shade::Black => canvas.set_draw_color(Color::RGBA(0, 0, 0, 255)),
+                    palette::Shade::Black => {
+                        canvas.set_draw_color(Color::RGBA(0, 0, 0, 255))
+                    }
                 }
                 canvas
                     .fill_rect(Rect::new(
@@ -142,7 +153,6 @@ impl Display {
                     gameboy.next_frame(&mut framebuffer);
                     self.draw(&mut canvas, &framebuffer, scale);
                     if self.config.debug.frame_count {
-                        // println!("Frame:{}", self.frame_count);
                         let surface = font.render(&format!("F:{}", self.frame_count))
                             .blended(Color::RGBA(255, 0, 0, 255))
                             .unwrap();

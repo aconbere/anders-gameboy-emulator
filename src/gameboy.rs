@@ -13,6 +13,13 @@ use device::boot_rom;
 use device::cartridge;
 use device::interrupt;
 
+/* Represents the gameboy device. Owns all the components needed to get it working.
+ * However the actual loop is controlled by the display since SDL2 wants to own the
+ * main game loop.
+ *
+ * The main function to understand is `next_frame` which will fill a framebuffer with
+ * palette data to be rendered to screen by the display.
+ * */
 pub struct Gameboy {
     registers: registers::Registers,
     instructions: instructions::Instructions,
@@ -23,6 +30,13 @@ pub struct Gameboy {
 }
 
 impl Gameboy {
+    /* Continuously executes instructions (each of which returns the number of cycles
+     * it took) until the cycle count exceeds 70244. Gameboy frame timings are based on
+     * cycles and 70244 is the number of frames a gameboy takes to render a full frame.
+     *
+     * This function takes as its input a `framebuffer` which is an array of palette::Shades
+     * how to render a shade is up to the display.
+     */
     pub fn next_frame(&mut self, framebuffer: &mut framebuffer::Framebuffer) {
         loop {
             let m = &mut self.mmu;
@@ -48,7 +62,10 @@ impl Gameboy {
             }
 
             self.cycle_count += cycles as u32;
+
             if self.cycle_count >= 70244 {
+                /* if we crossed 70244 we want to loop back around
+                 */
                 self.cycle_count -= 70244;
                 break;
             }
@@ -56,8 +73,23 @@ impl Gameboy {
         }
     }
 
-    /* Consider actually just using tile maps here!
+    /* Debug functions: */
+
+    /* Looks through tile_data_1 and renders each of the tiles to screen. Useful to debug what tile
+     * data is loaded.
      */
+    pub fn render_tile_data(&self, framebuffer: &mut framebuffer::Framebuffer) {
+        for ty in 0..18 {
+            for tx in 0..20 {
+                let i = (ty * 20) + tx;
+                if i >= 192 {
+                    return;
+                }
+                let tile = self.mmu.tile_data_1.get_tile(i);
+                self.render_tile(framebuffer, &tile, &self.mmu.hardware_io.background_palette, tx, ty);
+            }
+        }
+    }
 
     pub fn render_tile(
         &self,
@@ -75,19 +107,6 @@ impl Gameboy {
             for x in 0..8 {
                 let pixel_index = (tile_index_y + tile_index_x) + (y as u32 * 160) + (x as u32);
                 framebuffer[pixel_index as usize] = palette.map_shades(row[x as usize]);
-            }
-        }
-    }
-
-    pub fn render_tile_data(&self, framebuffer: &mut framebuffer::Framebuffer) {
-        for ty in 0..18 {
-            for tx in 0..20 {
-                let i = (ty * 20) + tx;
-                if i >= 192 {
-                    return;
-                }
-                let tile = self.mmu.tile_data_1.get_tile(i);
-                self.render_tile(framebuffer, &tile, &self.mmu.hardware_io.background_palette, tx, ty);
             }
         }
     }
