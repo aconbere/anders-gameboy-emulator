@@ -492,11 +492,7 @@ fn load_from_memory(
     registers.set8(rv, v);
 }
 
-pub fn push(
-    registers: &mut Registers,
-    mmu: &mut mmu::MMU,
-    r: &Registers16,
-) {
+pub fn push(registers: &mut Registers, mmu: &mut mmu::MMU, r: &Registers16) {
     let sp = registers.get16(&Registers16::SP);
     let v = registers.get16(r);
     let (vh, vl) = bytes::split_u16(v);
@@ -734,9 +730,9 @@ impl Op {
             Op::JP(JpArgs::CheckFlag(f)) => {
                 if check_flags(registers, f) {
                     jump(registers, bytes::combine_little(args[0], args[1]));
-                    12
-                } else {
                     16
+                } else {
+                    12
                 }
             }
             Op::JP(JpArgs::N) => {
