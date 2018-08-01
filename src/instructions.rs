@@ -472,8 +472,8 @@ fn load_to_memory(
 fn load_from_memory(
     registers: &mut Registers,
     mmu: &mut mmu::MMU,
-    rm: &Registers16,
     rv: &Registers8,
+    rm: &Registers16,
 ) {
     let m = registers.get16(rm);
     let v = mmu.get(m);
@@ -687,19 +687,19 @@ impl Op {
                 registers.dec_hl();
                 8
             }
+            Op::LoadAndDecR => {
+                load_from_memory(registers, mmu, &Registers8::A, &Registers16::HL);
+                registers.dec_hl();
+                8
+            }
             Op::LoadAndInc => {
                 load_to_memory(registers, mmu, &Registers16::HL, &Registers8::A);
                 registers.inc_hl();
                 8
             }
             Op::LoadAndIncR => {
-                load_from_memory(registers, mmu, &Registers16::HL, &Registers8::A);
+                load_from_memory(registers, mmu, &Registers8::A, &Registers16::HL);
                 registers.inc_hl();
-                8
-            }
-            Op::LoadAndDecR => {
-                load_from_memory(registers, mmu, &Registers16::HL, &Registers8::A);
-                registers.dec_hl();
                 8
             }
             Op::JR(JrArgs::CheckFlag(f)) => {
