@@ -158,13 +158,11 @@ fn cpl(registers: &mut Registers, v:u8) -> u8 {
 }
 
 fn set(v: u8, n: u8) -> u8 {
-    let mask = 1 << n;
-    v | mask
+    v | (1 << n)
 }
 
 fn res(v: u8, n: u8) -> u8 {
-    let mask = !(1 << n);
-    v & mask
+    v & !(0x01 << n)
 }
 
 fn bit(registers:&mut Registers, v:u8, location:u8) -> bool {
@@ -338,8 +336,14 @@ fn ret(registers: &mut Registers, mmu: &mmu::MMU) {
     registers.set16(&Registers16::SP, sp + 2);
 }
 
-fn dec8(registers: &mut Registers, v: u8) -> u8 {
-    sub(registers, v, 1)
+fn dec8(registers: &mut Registers, a: u8) -> u8 {
+    let n = a.wrapping_sub(1);
+
+    registers.set_flag(Flag::Z, n == 0);
+    registers.set_flag(Flag::N, true);
+    registers.set_flag(Flag::H, (n & 0xF) == 0xF);
+
+    n
 }
 
 fn dec16(_registers: &mut Registers, v: u16) -> u16 {
@@ -416,6 +420,16 @@ fn check_half_carry_16_add(a: u16, b: u16) -> bool {
 
 fn check_half_carry_8_sub(a: u8, b: u8) -> bool {
     (a & 0xF0) < (b & 0xF0)
+}
+
+fn inc8(registers: &mut Registers, a: u8) -> u8 {
+    let out = a.wrapping_add(1);
+
+    registers.set_flag(Flag::Z, out == 0);
+    registers.set_flag(Flag::N, false);
+    registers.set_flag(Flag::H, (out & 0xF) == 0);
+
+    out
 }
 
 fn add(registers: &mut Registers, a: u8, v: u8) -> u8 {
@@ -688,22 +702,12 @@ impl Op {
             Op::LoadFF00(_, _) => panic!("invalid loadFF00 inputs"),
 
             Op::LoadAndDec => {
-                load_to_memory(
-                    registers,
-                    mmu,
-                    &Registers16::HL,
-                    &Registers8::A,
-                );
+                load_to_memory(registers, mmu, &Registers16::HL, &Registers8::A);
                 registers.dec_hl();
                 8
             }
             Op::LoadAndInc => {
-                load_to_memory(
-                    registers,
-                    mmu,
-                    &Registers16::HL,
-                    &Registers8::A,
-                );
+                load_to_memory(registers, mmu, &Registers16::HL, &Registers8::A);
                 registers.inc_hl();
                 8
             }
@@ -807,7 +811,8 @@ impl Op {
             // ALU Codes
             Op::Inc8(Destination8::R(r)) => {
                 let v = registers.get8(r);
-                let out = add(registers, v, 1);
+
+                let out = inc8(registers, v);
 
                 registers.set8(r, out);
                 4
@@ -815,7 +820,7 @@ impl Op {
             Op::Inc8(Destination8::Mem(r)) => {
                 let rm = registers.get16(r);
                 let v = mmu.get(rm);
-                let out = add(registers, v, 1);
+                let out = inc8(registers, v);
 
                 mmu.set(rm, out);
                 12
