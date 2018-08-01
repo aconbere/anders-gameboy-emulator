@@ -29,7 +29,7 @@ impl Interrupt {
 }
 
 pub fn handle_interrupt(registers:&mut Registers, mmu:&mut MMU, f:Flag) {
-    instructions::push_stack(registers, mmu, &Registers16::PC);
+    instructions::push(registers, mmu, &Registers16::PC);
     println!("Handling Iterrupt: {:?}", f);
 
     match f {

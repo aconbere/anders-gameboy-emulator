@@ -141,7 +141,7 @@ fn rst_jump_location(r:&RstArgs) -> u16 {
 }
 
 fn rst(registers: &mut Registers, mmu: &mut mmu::MMU, r:&RstArgs)  {
-    push_stack(registers, mmu, &Registers16::PC);
+    push(registers, mmu, &Registers16::PC);
     jump(registers, rst_jump_location(r));
 
 }
@@ -325,15 +325,12 @@ fn and(registers: &mut Registers, v:u8) {
 }
 
 fn call(registers: &mut Registers, mmu: &mut mmu::MMU, v: u16) {
-    push_stack(registers, mmu, &Registers16::PC);
+    push(registers, mmu, &Registers16::PC);
     registers.set16( &Registers16::PC, v);
 }
 
 fn ret(registers: &mut Registers, mmu: &mmu::MMU) {
-    let sp = registers.get16(&Registers16::SP);
-    let v = mmu.get16(sp);
-    registers.set16(&Registers16::PC, v);
-    registers.set16(&Registers16::SP, sp + 2);
+    pop(registers, mmu, &Registers16::PC);
 }
 
 fn dec8(registers: &mut Registers, a: u8) -> u8 {
@@ -495,7 +492,7 @@ fn load_from_memory(
     registers.set8(rv, v);
 }
 
-pub fn push_stack(
+pub fn push(
     registers: &mut Registers,
     mmu: &mut mmu::MMU,
     r: &Registers16,
@@ -508,7 +505,7 @@ pub fn push_stack(
     registers.set16(&Registers16::SP, sp - 2);
 }
 
-fn pop_stack(registers: &mut Registers, mmu: &mut mmu::MMU, r: &Registers16) {
+fn pop(registers: &mut Registers, mmu: &mmu::MMU, r: &Registers16) {
     let sp = registers.get16(&Registers16::SP);
     let v = mmu.get16(sp);
     registers.set16(r, v);
@@ -736,9 +733,9 @@ impl Op {
 
             Op::JP(JpArgs::CheckFlag(f)) => {
                 if check_flags(registers, f) {
+                    jump(registers, bytes::combine_little(args[0], args[1]));
                     12
                 } else {
-                    jump(registers, bytes::combine_little(args[0], args[1]));
                     16
                 }
             }
@@ -768,11 +765,11 @@ impl Op {
             }
 
             Op::PUSH(r) => {
-                push_stack(registers, mmu, r);
+                push(registers, mmu, r);
                 16
             }
             Op::POP(r) => {
-                pop_stack(registers, mmu, r);
+                pop(registers, mmu, r);
                 12
             }
             Op::RET(None) => {

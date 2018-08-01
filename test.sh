@@ -13,3 +13,10 @@ pushd ../blarggs-tests/cpu_instrs/source
 
 popd
 cargo run -- --boot_rom ../gb_test_roms/DMG_ROM.bin --game_rom ../blarggs-tests/cpu_instrs/source/test.gb
+# cargo run -- \
+#   --boot_rom ../gb_test_roms/DMG_ROM.bin \
+#   --game_rom ../blarggs-tests/cpu_instrs/source/test.gb \
+#   debug \
+#     --log_instructions \
+#     --frame_count
+
