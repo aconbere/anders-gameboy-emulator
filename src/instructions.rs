@@ -21,7 +21,7 @@ pub enum Destination16 {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum Add16Args {
+pub enum ADD16Args {
     R(Registers16)
 }
 
@@ -60,20 +60,20 @@ pub enum Op {
     NOP,
     DI, // Disable interrupts
     EI, // Enable interrupts
-    Load8(Destination8, Destination8),
-    Load16(Destination16, Destination16),
+    LD8(Destination8, Destination8),
+    LD16(Destination16, Destination16),
 
-    Inc8(Destination8),
+    INC8(Destination8),
     Inc16(Destination16),
-    Dec8(Destination8),
-    Dec16(Destination16),
+    DEC8(Destination8),
+    DEC16(Destination16),
     OR(Destination8),
     XOR(Destination8),
     AND(Destination8),
-    Sub(Destination8),
-    Add(Destination8),
-    Adc(Destination8),
-    Add16(Add16Args, Add16Args),
+    SUB(Destination8),
+    ADD(Destination8),
+    ADC(Destination8),
+    ADD16(ADD16Args, ADD16Args),
 
     RLCA,
     RRCA,
@@ -82,7 +82,7 @@ pub enum Op {
     CPL,
     CCF,
     SCF,
-    Sbc(Destination8),
+    SBC(Destination8),
 
     LoadAndInc,
     LoadAndIncR,
@@ -91,14 +91,14 @@ pub enum Op {
     JR(JrArgs),
     JP(JpArgs),
     LoadFF00(LoadFF00Targets, LoadFF00Targets),
-    Call(Option<CheckFlag>),
-    Pop(Registers16),
-    Push(Registers16),
-    Ret(Option<CheckFlag>),
-    RetI,
+    CALL(Option<CheckFlag>),
+    POP(Registers16),
+    PUSH(Registers16),
+    RET(Option<CheckFlag>),
+    RETI,
     RST(RstArgs),
-    Compare(Destination8),
-    Halt,
+    CP(Destination8),
+    HALT,
     PrefixCB,
 
     // CB extras
@@ -523,21 +523,21 @@ impl Op {
             Op::NOP => 0,
             Op::DI => 0,
             Op::EI => 0,
-            Op::Halt => 0,
+            Op::HALT => 0,
             Op::PrefixCB => 0,
 
-            Op::Load8(_, Destination8::N) => 1,
-            Op::Load8(Destination8::N, _) => 2,
-            Op::Load8(_, _) => 0,
+            Op::LD8(_, Destination8::N) => 1,
+            Op::LD8(Destination8::N, _) => 2,
+            Op::LD8(_, _) => 0,
 
-            Op::Load16(_, Destination16::N) => 2,
-            Op::Load16(Destination16::N, _) => 2,
-            Op::Load16(_, _) => 0,
+            Op::LD16(_, Destination16::N) => 2,
+            Op::LD16(Destination16::N, _) => 2,
+            Op::LD16(_, _) => 0,
 
-            Op::Inc8(_) => 0,
+            Op::INC8(_) => 0,
             Op::Inc16(_) => 0,
-            Op::Dec8(_) => 0,
-            Op::Dec16(_) => 0,
+            Op::DEC8(_) => 0,
+            Op::DEC16(_) => 0,
             Op::LoadAndInc => 0,
             Op::LoadAndDec => 0,
             Op::LoadAndIncR => 0,
@@ -548,26 +548,26 @@ impl Op {
             Op::XOR(_) => 0,
             Op::AND(Destination8::N) => 1,
             Op::AND(_) => 0,
-            Op::Sub(Destination8::N) => 1,
-            Op::Sub(_) => 0,
-            Op::Add(Destination8::N) => 1,
-            Op::Add(_) => 0,
-            Op::Adc(Destination8::N) => 1,
-            Op::Adc(_) => 0,
-            Op::Add16(_, _) => 0,
+            Op::SUB(Destination8::N) => 1,
+            Op::SUB(_) => 0,
+            Op::ADD(Destination8::N) => 1,
+            Op::ADD(_) => 0,
+            Op::ADC(Destination8::N) => 1,
+            Op::ADC(_) => 0,
+            Op::ADD16(_, _) => 0,
             Op::JR(_) => 1,
             Op::JP(_) => 2,
             Op::LoadFF00(_, LoadFF00Targets::N) => 1,
             Op::LoadFF00(LoadFF00Targets::N, _) => 1,
             Op::LoadFF00(_, _) => 0,
-            Op::Call(_) => 2,
-            Op::Push(_) => 0,
-            Op::Pop(_) => 0,
-            Op::Ret(_) => 0,
-            Op::RetI => 0,
+            Op::CALL(_) => 2,
+            Op::PUSH(_) => 0,
+            Op::POP(_) => 0,
+            Op::RET(_) => 0,
+            Op::RETI => 0,
             Op::RST(_) => 0,
-            Op::Compare(Destination8::N) => 1,
-            Op::Compare(_) => 0,
+            Op::CP(Destination8::N) => 1,
+            Op::CP(_) => 0,
             Op::RLCA => 0,
             Op::RRCA => 0,
             Op::RRA => 0,
@@ -575,8 +575,8 @@ impl Op {
             Op::CPL => 0,
             Op::CCF => 0,
             Op::SCF => 0,
-            Op::Sbc(Destination8::N) => 1,
-            Op::Sbc(_) => 0,
+            Op::SBC(Destination8::N) => 1,
+            Op::SBC(_) => 0,
 
             // cb instructions
             Op::RLC(_) => 0,
@@ -614,54 +614,54 @@ impl Op {
                 registers.set_interrupts_enabled(true);
                 4
             }
-            Op::Halt => {
-                println!("Halting!");
+            Op::HALT => {
+                println!("HALTing!");
                 4
             },
             Op::PrefixCB => 4,
-            Op::Load8(Destination8::R(r1), Destination8::R(r2)) => {
+            Op::LD8(Destination8::R(r1), Destination8::R(r2)) => {
                 let v = registers.get8(r2);
                 registers.set8(r1, v);
                 4
             }
-            Op::Load8(Destination8::R(r1), Destination8::N) => {
+            Op::LD8(Destination8::R(r1), Destination8::N) => {
                 registers.set8(r1, args[0]);
                 4
             }
-            Op::Load8(Destination8::R(r1), Destination8::Mem(r2)) => {
+            Op::LD8(Destination8::R(r1), Destination8::Mem(r2)) => {
                 let v = mmu.get(registers.get16(r2));
                 registers.set8(r1, v);
                 8
             }
-            Op::Load8(Destination8::Mem(r1), Destination8::R(r2)) => {
+            Op::LD8(Destination8::Mem(r1), Destination8::R(r2)) => {
                 load_to_memory(registers, mmu, r1, r2);
                 8
             }
-            Op::Load8(Destination8::N, Destination8::R(r)) => {
+            Op::LD8(Destination8::N, Destination8::R(r)) => {
                 let a = bytes::combine_little(args[0], args[1]);
                 let v = registers.get8(r);
                 mmu.set(a, v);
                 8
             }
-            Op::Load8(Destination8::Mem(r1), Destination8::N) => {
+            Op::LD8(Destination8::Mem(r1), Destination8::N) => {
                 let v = args[0];
                 let rm = registers.get16(r1);
                 mmu.set(rm, v);
                 12
             }
-            Op::Load8(_, _) => panic!("Not Implemented"),
+            Op::LD8(_, _) => panic!("Not Implemented"),
 
-            Op::Load16(Destination16::R(r1), Destination16::R(r2)) => {
+            Op::LD16(Destination16::R(r1), Destination16::R(r2)) => {
                 let v = registers.get16(r2);
                 registers.set16(r1, v);
                 12
             }
-            Op::Load16(Destination16::R(r1), Destination16::N) => {
+            Op::LD16(Destination16::R(r1), Destination16::N) => {
                 let v = bytes::combine_little(args[0], args[1]);
                 registers.set16(r1, v);
                 12
             }
-            Op::Load16(Destination16::N, Destination16::R(r)) => {
+            Op::LD16(Destination16::N, Destination16::R(r)) => {
                 let v = registers.get16(r);
                 let (v_high, v_low) = bytes::split_u16(v);
                 let a = bytes::combine_little(args[0], args[1]);
@@ -669,11 +669,11 @@ impl Op {
                 mmu.set(a+1, v_low);
                 20
             }
-            Op::Load16(Destination16::Mem(_), _) => {
+            Op::LD16(Destination16::Mem(_), _) => {
                 panic!("Not Implemented");
                 //20
             }
-            Op::Load16(_, _) => panic!("Not Implemented"),
+            Op::LD16(_, _) => panic!("Not Implemented"),
 
             Op::LoadFF00(LoadFF00Targets::C, LoadFF00Targets::A) => {
                 let c = registers.get8(&Registers8::C) as u16;
@@ -712,22 +712,12 @@ impl Op {
                 8
             }
             Op::LoadAndIncR => {
-                load_from_memory(
-                    registers,
-                    mmu,
-                    &Registers16::HL,
-                    &Registers8::A,
-                );
+                load_from_memory(registers, mmu, &Registers16::HL, &Registers8::A);
                 registers.inc_hl();
                 8
             }
             Op::LoadAndDecR => {
-                load_from_memory(
-                    registers,
-                    mmu,
-                    &Registers16::HL,
-                    &Registers8::A,
-                );
+                load_from_memory(registers, mmu, &Registers16::HL, &Registers8::A);
                 registers.dec_hl();
                 8
             }
@@ -763,12 +753,12 @@ impl Op {
                 16
             }
 
-            Op::Call(None) => {
+            Op::CALL(None) => {
                 call(registers, mmu, bytes::combine_little(args[0], args[1]));
                 24
             }
 
-            Op::Call(Some(flag)) => {
+            Op::CALL(Some(flag)) => {
                 if check_flags(registers, &flag) {
                     call(registers, mmu, bytes::combine_little(args[0], args[1]));
                     24
@@ -777,19 +767,19 @@ impl Op {
                 }
             }
 
-            Op::Push(r) => {
+            Op::PUSH(r) => {
                 push_stack(registers, mmu, r);
                 16
             }
-            Op::Pop(r) => {
+            Op::POP(r) => {
                 pop_stack(registers, mmu, r);
                 12
             }
-            Op::Ret(None) => {
+            Op::RET(None) => {
                 ret(registers, mmu);
                 16
             }
-            Op::Ret(Some(f)) => {
+            Op::RET(Some(f)) => {
                 if check_flags(registers, f) {
                     ret(registers, mmu);
                     20
@@ -802,14 +792,14 @@ impl Op {
                 rst(registers, mmu, r);
                 32
             }
-            Op::RetI => {
+            Op::RETI => {
                 ret(registers, mmu);
                 registers.set_interrupts_enabled(true);
                 16
             }
 
             // ALU Codes
-            Op::Inc8(Destination8::R(r)) => {
+            Op::INC8(Destination8::R(r)) => {
                 let v = registers.get8(r);
 
                 let out = inc8(registers, v);
@@ -817,7 +807,7 @@ impl Op {
                 registers.set8(r, out);
                 4
             }
-            Op::Inc8(Destination8::Mem(r)) => {
+            Op::INC8(Destination8::Mem(r)) => {
                 let rm = registers.get16(r);
                 let v = mmu.get(rm);
                 let out = inc8(registers, v);
@@ -825,7 +815,7 @@ impl Op {
                 mmu.set(rm, out);
                 12
             }
-            Op::Inc8(Destination8::N) => panic!("Not Implemented"),
+            Op::INC8(Destination8::N) => panic!("Not Implemented"),
 
             Op::Inc16(Destination16::R(r)) => {
                 let v = registers.get16(r);
@@ -837,14 +827,14 @@ impl Op {
             Op::Inc16(Destination16::Mem(_)) => panic!("Not Implemented"),
             Op::Inc16(Destination16::N) => panic!("Not Implemented"),
 
-            Op::Dec8(Destination8::R(r)) => {
+            Op::DEC8(Destination8::R(r)) => {
                 let v = registers.get8(r);
                 let n = dec8(registers, v);
 
                 registers.set8(r, n);
                 4
             }
-            Op::Dec8(Destination8::Mem(r)) => {
+            Op::DEC8(Destination8::Mem(r)) => {
                 let a = registers.get16(r);
                 let v = mmu.get(a);
                 let n = dec8(registers, v);
@@ -852,27 +842,27 @@ impl Op {
                 mmu.set(a, n);
                 12
             }
-            Op::Dec8(Destination8::N) => panic!("Not Implemented"),
-            Op::Dec16(Destination16::R(r)) => {
+            Op::DEC8(Destination8::N) => panic!("Not Implemented"),
+            Op::DEC16(Destination16::R(r)) => {
                 let v = registers.get16(r);
                 let n = dec16(registers, v);
 
                 registers.set16(r, n);
                 8
             }
-            Op::Dec16(Destination16::Mem(_)) => panic!("Not Implemented"),
-            Op::Dec16(Destination16::N) => panic!("Not Implemented"),
+            Op::DEC16(Destination16::Mem(_)) => panic!("Not Implemented"),
+            Op::DEC16(Destination16::N) => panic!("Not Implemented"),
 
-            Op::Compare(Destination8::N) => {
+            Op::CP(Destination8::N) => {
                 compare(registers, args[0]);
                 8
             }
-            Op::Compare(Destination8::R(r)) => {
+            Op::CP(Destination8::R(r)) => {
                 let v = registers.get8(r);
                 compare(registers, v);
                 4
             }
-            Op::Compare(Destination8::Mem(r)) => {
+            Op::CP(Destination8::Mem(r)) => {
                 let m = registers.get16(r);
                 let v = mmu.get(m);
                 compare(registers, v);
@@ -918,7 +908,7 @@ impl Op {
                 8
             }
 
-            Op::Sbc(Destination8::R(r)) => {
+            Op::SBC(Destination8::R(r)) => {
                 let ra = &Registers8::A;
                 let a = registers.get8(ra);
 
@@ -929,7 +919,7 @@ impl Op {
                 registers.set8(ra, out);
                 4
             }
-            Op::Sbc(Destination8::Mem(r)) => {
+            Op::SBC(Destination8::Mem(r)) => {
                 let ra = &Registers8::A;
                 let a = registers.get8(ra);
                 let mr = registers.get16(r);
@@ -939,7 +929,7 @@ impl Op {
                 registers.set8(ra, out);
                 8
             }
-            Op::Sbc(Destination8::N) => {
+            Op::SBC(Destination8::N) => {
                 let ra = &Registers8::A;
                 let a = registers.get8(ra);
                 let v = args[0];
@@ -948,7 +938,7 @@ impl Op {
                 4
             }
 
-            Op::Sub(Destination8::R(r)) => {
+            Op::SUB(Destination8::R(r)) => {
                 let ra = &Registers8::A;
                 let a = registers.get8(ra);
 
@@ -961,7 +951,7 @@ impl Op {
                 4
             }
 
-            Op::Sub(Destination8::Mem(r)) => {
+            Op::SUB(Destination8::Mem(r)) => {
                 let ra = &Registers8::A;
                 let a = registers.get8(ra);
 
@@ -975,7 +965,7 @@ impl Op {
                 8
             }
 
-            Op::Sub(Destination8::N) => {
+            Op::SUB(Destination8::N) => {
                 let ra = &Registers8::A;
                 let a = registers.get8(ra);
 
@@ -986,7 +976,7 @@ impl Op {
                 8
             }
 
-            Op::Add(Destination8::R(r)) => {
+            Op::ADD(Destination8::R(r)) => {
                 let ra = &Registers8::A;
                 let a = registers.get8(ra);
 
@@ -998,7 +988,7 @@ impl Op {
                 4
             }
 
-            Op::Add(Destination8::Mem(r)) => {
+            Op::ADD(Destination8::Mem(r)) => {
                 let ra = &Registers8::A;
                 let a = registers.get8(ra);
 
@@ -1011,7 +1001,7 @@ impl Op {
 
                 8
             }
-            Op::Add(Destination8::N) => {
+            Op::ADD(Destination8::N) => {
                 let ra = &Registers8::A;
                 let a = registers.get8(ra);
 
@@ -1023,7 +1013,7 @@ impl Op {
                 4
             }
 
-            Op::Adc(Destination8::R(r)) => {
+            Op::ADC(Destination8::R(r)) => {
                 let ra = &Registers8::A;
                 let a = registers.get8(ra);
 
@@ -1034,7 +1024,7 @@ impl Op {
                 registers.set8(ra, out);
                 4
             }
-            Op::Adc(Destination8::Mem(r)) => {
+            Op::ADC(Destination8::Mem(r)) => {
                 let ra = &Registers8::A;
                 let a = registers.get8(ra);
 
@@ -1046,7 +1036,7 @@ impl Op {
                 registers.set8(ra, out);
                 8
             }
-            Op::Adc(Destination8::N) => {
+            Op::ADC(Destination8::N) => {
                 let ra = &Registers8::A;
                 let a = registers.get8(ra);
 
@@ -1058,7 +1048,7 @@ impl Op {
                 4
             }
 
-            Op::Add16(Add16Args::R(r1), Add16Args::R(r2)) => {
+            Op::ADD16(ADD16Args::R(r1), ADD16Args::R(r2)) => {
                 let v = registers.get16(r2);
                 add16(registers, r1, v);
                 8
@@ -1273,174 +1263,174 @@ pub fn new() -> Instructions {
     let mut instructions = vec![Op::NotImplemented; 256];
 
     instructions[0x0000] = Op::NOP;
-    instructions[0x0001] = Op::Load16(Destination16::R(Registers16::BC), Destination16::N);
-    instructions[0x0002] = Op::Load8(Destination8::Mem(Registers16::BC), Destination8::R(Registers8::A));
+    instructions[0x0001] = Op::LD16(Destination16::R(Registers16::BC), Destination16::N);
+    instructions[0x0002] = Op::LD8(Destination8::Mem(Registers16::BC), Destination8::R(Registers8::A));
     instructions[0x0003] = Op::Inc16(Destination16::R(Registers16::BC));
-    instructions[0x0004] = Op::Inc8(Destination8::R(Registers8::B));
-    instructions[0x0005] = Op::Dec8(Destination8::R(Registers8::B));
-    instructions[0x0006] = Op::Load8(Destination8::R(Registers8::B), Destination8::N);
+    instructions[0x0004] = Op::INC8(Destination8::R(Registers8::B));
+    instructions[0x0005] = Op::DEC8(Destination8::R(Registers8::B));
+    instructions[0x0006] = Op::LD8(Destination8::R(Registers8::B), Destination8::N);
     instructions[0x0007] = Op::RLCA;
-    instructions[0x0008] = Op::Load16(Destination16::N, Destination16::R(Registers16::SP));
-    instructions[0x0009] = Op::Add16(Add16Args::R(Registers16::HL), Add16Args::R(Registers16::BC));
-    instructions[0x000A] = Op::Load8(Destination8::R(Registers8::C), Destination8::Mem(Registers16::BC));
-    instructions[0x000B] = Op::Dec16(Destination16::R(Registers16::BC));
-    instructions[0x000C] = Op::Inc8(Destination8::R(Registers8::C));
-    instructions[0x000D] = Op::Dec8(Destination8::R(Registers8::C));
-    instructions[0x000E] = Op::Load8(Destination8::R(Registers8::C), Destination8::N);
+    instructions[0x0008] = Op::LD16(Destination16::N, Destination16::R(Registers16::SP));
+    instructions[0x0009] = Op::ADD16(ADD16Args::R(Registers16::HL), ADD16Args::R(Registers16::BC));
+    instructions[0x000A] = Op::LD8(Destination8::R(Registers8::C), Destination8::Mem(Registers16::BC));
+    instructions[0x000B] = Op::DEC16(Destination16::R(Registers16::BC));
+    instructions[0x000C] = Op::INC8(Destination8::R(Registers8::C));
+    instructions[0x000D] = Op::DEC8(Destination8::R(Registers8::C));
+    instructions[0x000E] = Op::LD8(Destination8::R(Registers8::C), Destination8::N);
     instructions[0x000F] = Op::RRCA;
 
     instructions[0x0010] = Op::STOP;
-    instructions[0x0011] = Op::Load16(Destination16::R(Registers16::DE), Destination16::N);
-    instructions[0x0012] = Op::Load8(Destination8::Mem(Registers16::DE), Destination8::R(Registers8::A));
+    instructions[0x0011] = Op::LD16(Destination16::R(Registers16::DE), Destination16::N);
+    instructions[0x0012] = Op::LD8(Destination8::Mem(Registers16::DE), Destination8::R(Registers8::A));
     instructions[0x0013] = Op::Inc16(Destination16::R(Registers16::DE));
-    instructions[0x0014] = Op::Inc8(Destination8::R(Registers8::D));
-    instructions[0x0015] = Op::Dec8(Destination8::R(Registers8::D));
-    instructions[0x0016] = Op::Load8(Destination8::R(Registers8::D), Destination8::N);
+    instructions[0x0014] = Op::INC8(Destination8::R(Registers8::D));
+    instructions[0x0015] = Op::DEC8(Destination8::R(Registers8::D));
+    instructions[0x0016] = Op::LD8(Destination8::R(Registers8::D), Destination8::N);
     instructions[0x0017] = Op::RL(Destination8::R(Registers8::A));
     instructions[0x0018] = Op::JR(JrArgs::N);
-    instructions[0x0019] = Op::Add16(Add16Args::R(Registers16::HL), Add16Args::R(Registers16::DE));
-    instructions[0x001A] = Op::Load8(Destination8::R(Registers8::A), Destination8::Mem(Registers16::DE));
-    instructions[0x001B] = Op::Dec16(Destination16::R(Registers16::DE));
-    instructions[0x001C] = Op::Inc8(Destination8::R(Registers8::E));
-    instructions[0x001D] = Op::Dec8(Destination8::R(Registers8::E));
-    instructions[0x001E] = Op::Load8(Destination8::R(Registers8::E), Destination8::N);
+    instructions[0x0019] = Op::ADD16(ADD16Args::R(Registers16::HL), ADD16Args::R(Registers16::DE));
+    instructions[0x001A] = Op::LD8(Destination8::R(Registers8::A), Destination8::Mem(Registers16::DE));
+    instructions[0x001B] = Op::DEC16(Destination16::R(Registers16::DE));
+    instructions[0x001C] = Op::INC8(Destination8::R(Registers8::E));
+    instructions[0x001D] = Op::DEC8(Destination8::R(Registers8::E));
+    instructions[0x001E] = Op::LD8(Destination8::R(Registers8::E), Destination8::N);
     instructions[0x001F] = Op::RRA;
 
     instructions[0x0020] = Op::JR(JrArgs::CheckFlag(CheckFlag::NZ));
-    instructions[0x0021] = Op::Load16(Destination16::R(Registers16::HL), Destination16::N);
+    instructions[0x0021] = Op::LD16(Destination16::R(Registers16::HL), Destination16::N);
     instructions[0x0022] = Op::LoadAndInc;
     instructions[0x0023] = Op::Inc16(Destination16::R(Registers16::HL));
-    instructions[0x0024] = Op::Inc8(Destination8::R(Registers8::H));
-    instructions[0x0025] = Op::Dec8(Destination8::R(Registers8::H));
-    instructions[0x0026] = Op::Load8(Destination8::R(Registers8::H), Destination8::N);
+    instructions[0x0024] = Op::INC8(Destination8::R(Registers8::H));
+    instructions[0x0025] = Op::DEC8(Destination8::R(Registers8::H));
+    instructions[0x0026] = Op::LD8(Destination8::R(Registers8::H), Destination8::N);
     instructions[0x0027] = Op::NotImplemented;
     instructions[0x0028] = Op::JR(JrArgs::CheckFlag(CheckFlag::Z));
-    instructions[0x0029] = Op::Add16(Add16Args::R(Registers16::HL), Add16Args::R(Registers16::HL));
+    instructions[0x0029] = Op::ADD16(ADD16Args::R(Registers16::HL), ADD16Args::R(Registers16::HL));
     instructions[0x002A] = Op::LoadAndIncR;
-    instructions[0x002B] = Op::Dec16(Destination16::R(Registers16::HL));
-    instructions[0x002C] = Op::Inc8(Destination8::R(Registers8::L));
-    instructions[0x002D] = Op::Dec8(Destination8::R(Registers8::L));
-    instructions[0x002E] = Op::Load8(Destination8::R(Registers8::L), Destination8::N);
+    instructions[0x002B] = Op::DEC16(Destination16::R(Registers16::HL));
+    instructions[0x002C] = Op::INC8(Destination8::R(Registers8::L));
+    instructions[0x002D] = Op::DEC8(Destination8::R(Registers8::L));
+    instructions[0x002E] = Op::LD8(Destination8::R(Registers8::L), Destination8::N);
     instructions[0x002F] = Op::CPL;
 
     instructions[0x0030] = Op::JR(JrArgs::CheckFlag(CheckFlag::NC));
-    instructions[0x0031] = Op::Load16(Destination16::R(Registers16::SP), Destination16::N);
+    instructions[0x0031] = Op::LD16(Destination16::R(Registers16::SP), Destination16::N);
     instructions[0x0032] = Op::LoadAndDec;
     instructions[0x0033] = Op::Inc16(Destination16::R(Registers16::SP));
-    instructions[0x0034] = Op::Inc8(Destination8::Mem(Registers16::HL));
-    instructions[0x0035] = Op::Dec8(Destination8::Mem(Registers16::HL));
-    instructions[0x0036] = Op::Load8(Destination8::Mem(Registers16::HL), Destination8::N);
+    instructions[0x0034] = Op::INC8(Destination8::Mem(Registers16::HL));
+    instructions[0x0035] = Op::DEC8(Destination8::Mem(Registers16::HL));
+    instructions[0x0036] = Op::LD8(Destination8::Mem(Registers16::HL), Destination8::N);
     instructions[0x0037] = Op::SCF;
     instructions[0x0038] = Op::JR(JrArgs::CheckFlag(CheckFlag::C));
-    instructions[0x0039] = Op::Add16(Add16Args::R(Registers16::HL), Add16Args::R(Registers16::SP));
+    instructions[0x0039] = Op::ADD16(ADD16Args::R(Registers16::HL), ADD16Args::R(Registers16::SP));
     instructions[0x003A] = Op::LoadAndDecR;
-    instructions[0x003B] = Op::Dec16(Destination16::R(Registers16::SP));
-    instructions[0x003C] = Op::Inc8(Destination8::R(Registers8::A));
-    instructions[0x003D] = Op::Dec8(Destination8::R(Registers8::A));
-    instructions[0x003E] = Op::Load8(Destination8::R(Registers8::A), Destination8::N);
+    instructions[0x003B] = Op::DEC16(Destination16::R(Registers16::SP));
+    instructions[0x003C] = Op::INC8(Destination8::R(Registers8::A));
+    instructions[0x003D] = Op::DEC8(Destination8::R(Registers8::A));
+    instructions[0x003E] = Op::LD8(Destination8::R(Registers8::A), Destination8::N);
     instructions[0x003F] = Op::CCF;
 
-    instructions[0x0040] = Op::Load8(Destination8::R(Registers8::B), Destination8::R(Registers8::B));
-    instructions[0x0041] = Op::Load8(Destination8::R(Registers8::B), Destination8::R(Registers8::C));
-    instructions[0x0042] = Op::Load8(Destination8::R(Registers8::B), Destination8::R(Registers8::D));
-    instructions[0x0043] = Op::Load8(Destination8::R(Registers8::B), Destination8::R(Registers8::E));
-    instructions[0x0044] = Op::Load8(Destination8::R(Registers8::B), Destination8::R(Registers8::H));
-    instructions[0x0045] = Op::Load8(Destination8::R(Registers8::B), Destination8::R(Registers8::L));
-    instructions[0x0046] = Op::Load8(Destination8::R(Registers8::B), Destination8::Mem(Registers16::HL));
-    instructions[0x0047] = Op::Load8(Destination8::R(Registers8::B), Destination8::R(Registers8::A));
-    instructions[0x0048] = Op::Load8(Destination8::R(Registers8::C), Destination8::R(Registers8::B));
-    instructions[0x0049] = Op::Load8(Destination8::R(Registers8::C), Destination8::R(Registers8::C));
-    instructions[0x004A] = Op::Load8(Destination8::R(Registers8::C), Destination8::R(Registers8::D));
-    instructions[0x004B] = Op::Load8(Destination8::R(Registers8::C), Destination8::R(Registers8::E));
-    instructions[0x004C] = Op::Load8(Destination8::R(Registers8::C), Destination8::R(Registers8::H));
-    instructions[0x004D] = Op::Load8(Destination8::R(Registers8::C), Destination8::R(Registers8::L));
-    instructions[0x004E] = Op::Load8(Destination8::R(Registers8::C), Destination8::Mem(Registers16::HL));
-    instructions[0x004F] = Op::Load8(Destination8::R(Registers8::C), Destination8::R(Registers8::A));
+    instructions[0x0040] = Op::LD8(Destination8::R(Registers8::B), Destination8::R(Registers8::B));
+    instructions[0x0041] = Op::LD8(Destination8::R(Registers8::B), Destination8::R(Registers8::C));
+    instructions[0x0042] = Op::LD8(Destination8::R(Registers8::B), Destination8::R(Registers8::D));
+    instructions[0x0043] = Op::LD8(Destination8::R(Registers8::B), Destination8::R(Registers8::E));
+    instructions[0x0044] = Op::LD8(Destination8::R(Registers8::B), Destination8::R(Registers8::H));
+    instructions[0x0045] = Op::LD8(Destination8::R(Registers8::B), Destination8::R(Registers8::L));
+    instructions[0x0046] = Op::LD8(Destination8::R(Registers8::B), Destination8::Mem(Registers16::HL));
+    instructions[0x0047] = Op::LD8(Destination8::R(Registers8::B), Destination8::R(Registers8::A));
+    instructions[0x0048] = Op::LD8(Destination8::R(Registers8::C), Destination8::R(Registers8::B));
+    instructions[0x0049] = Op::LD8(Destination8::R(Registers8::C), Destination8::R(Registers8::C));
+    instructions[0x004A] = Op::LD8(Destination8::R(Registers8::C), Destination8::R(Registers8::D));
+    instructions[0x004B] = Op::LD8(Destination8::R(Registers8::C), Destination8::R(Registers8::E));
+    instructions[0x004C] = Op::LD8(Destination8::R(Registers8::C), Destination8::R(Registers8::H));
+    instructions[0x004D] = Op::LD8(Destination8::R(Registers8::C), Destination8::R(Registers8::L));
+    instructions[0x004E] = Op::LD8(Destination8::R(Registers8::C), Destination8::Mem(Registers16::HL));
+    instructions[0x004F] = Op::LD8(Destination8::R(Registers8::C), Destination8::R(Registers8::A));
 
-    instructions[0x0050] = Op::Load8(Destination8::R(Registers8::D), Destination8::R(Registers8::B));
-    instructions[0x0051] = Op::Load8(Destination8::R(Registers8::D), Destination8::R(Registers8::C));
-    instructions[0x0052] = Op::Load8(Destination8::R(Registers8::D), Destination8::R(Registers8::D));
-    instructions[0x0053] = Op::Load8(Destination8::R(Registers8::D), Destination8::R(Registers8::E));
-    instructions[0x0054] = Op::Load8(Destination8::R(Registers8::D), Destination8::R(Registers8::H));
-    instructions[0x0055] = Op::Load8(Destination8::R(Registers8::D), Destination8::R(Registers8::L));
-    instructions[0x0056] = Op::Load8(Destination8::R(Registers8::D), Destination8::Mem(Registers16::HL));
-    instructions[0x0057] = Op::Load8(Destination8::R(Registers8::D), Destination8::R(Registers8::A));
-    instructions[0x0058] = Op::Load8(Destination8::R(Registers8::E), Destination8::R(Registers8::B));
-    instructions[0x0059] = Op::Load8(Destination8::R(Registers8::E), Destination8::R(Registers8::C));
-    instructions[0x005A] = Op::Load8(Destination8::R(Registers8::E), Destination8::R(Registers8::D));
-    instructions[0x005B] = Op::Load8(Destination8::R(Registers8::E), Destination8::R(Registers8::E));
-    instructions[0x005C] = Op::Load8(Destination8::R(Registers8::E), Destination8::R(Registers8::H));
-    instructions[0x005D] = Op::Load8(Destination8::R(Registers8::E), Destination8::R(Registers8::L));
-    instructions[0x005E] = Op::Load8(Destination8::R(Registers8::E), Destination8::Mem(Registers16::HL));
-    instructions[0x005F] = Op::Load8(Destination8::R(Registers8::E), Destination8::R(Registers8::A));
+    instructions[0x0050] = Op::LD8(Destination8::R(Registers8::D), Destination8::R(Registers8::B));
+    instructions[0x0051] = Op::LD8(Destination8::R(Registers8::D), Destination8::R(Registers8::C));
+    instructions[0x0052] = Op::LD8(Destination8::R(Registers8::D), Destination8::R(Registers8::D));
+    instructions[0x0053] = Op::LD8(Destination8::R(Registers8::D), Destination8::R(Registers8::E));
+    instructions[0x0054] = Op::LD8(Destination8::R(Registers8::D), Destination8::R(Registers8::H));
+    instructions[0x0055] = Op::LD8(Destination8::R(Registers8::D), Destination8::R(Registers8::L));
+    instructions[0x0056] = Op::LD8(Destination8::R(Registers8::D), Destination8::Mem(Registers16::HL));
+    instructions[0x0057] = Op::LD8(Destination8::R(Registers8::D), Destination8::R(Registers8::A));
+    instructions[0x0058] = Op::LD8(Destination8::R(Registers8::E), Destination8::R(Registers8::B));
+    instructions[0x0059] = Op::LD8(Destination8::R(Registers8::E), Destination8::R(Registers8::C));
+    instructions[0x005A] = Op::LD8(Destination8::R(Registers8::E), Destination8::R(Registers8::D));
+    instructions[0x005B] = Op::LD8(Destination8::R(Registers8::E), Destination8::R(Registers8::E));
+    instructions[0x005C] = Op::LD8(Destination8::R(Registers8::E), Destination8::R(Registers8::H));
+    instructions[0x005D] = Op::LD8(Destination8::R(Registers8::E), Destination8::R(Registers8::L));
+    instructions[0x005E] = Op::LD8(Destination8::R(Registers8::E), Destination8::Mem(Registers16::HL));
+    instructions[0x005F] = Op::LD8(Destination8::R(Registers8::E), Destination8::R(Registers8::A));
 
-    instructions[0x0060] = Op::Load8(Destination8::R(Registers8::H), Destination8::R(Registers8::B));
-    instructions[0x0061] = Op::Load8(Destination8::R(Registers8::H), Destination8::R(Registers8::C));
-    instructions[0x0062] = Op::Load8(Destination8::R(Registers8::H), Destination8::R(Registers8::D));
-    instructions[0x0063] = Op::Load8(Destination8::R(Registers8::H), Destination8::R(Registers8::E));
-    instructions[0x0064] = Op::Load8(Destination8::R(Registers8::H), Destination8::R(Registers8::H));
-    instructions[0x0065] = Op::Load8(Destination8::R(Registers8::H), Destination8::R(Registers8::L));
-    instructions[0x0066] = Op::Load8(Destination8::R(Registers8::H), Destination8::Mem(Registers16::HL));
-    instructions[0x0067] = Op::Load8(Destination8::R(Registers8::H), Destination8::R(Registers8::A));
-    instructions[0x0068] = Op::Load8(Destination8::R(Registers8::L), Destination8::R(Registers8::B));
-    instructions[0x0069] = Op::Load8(Destination8::R(Registers8::L), Destination8::R(Registers8::C));
-    instructions[0x006A] = Op::Load8(Destination8::R(Registers8::L), Destination8::R(Registers8::D));
-    instructions[0x006B] = Op::Load8(Destination8::R(Registers8::L), Destination8::R(Registers8::E));
-    instructions[0x006C] = Op::Load8(Destination8::R(Registers8::L), Destination8::R(Registers8::H));
-    instructions[0x006D] = Op::Load8(Destination8::R(Registers8::L), Destination8::R(Registers8::L));
-    instructions[0x006E] = Op::Load8(Destination8::R(Registers8::L), Destination8::Mem(Registers16::HL));
-    instructions[0x006F] = Op::Load8(Destination8::R(Registers8::L), Destination8::R(Registers8::A));
+    instructions[0x0060] = Op::LD8(Destination8::R(Registers8::H), Destination8::R(Registers8::B));
+    instructions[0x0061] = Op::LD8(Destination8::R(Registers8::H), Destination8::R(Registers8::C));
+    instructions[0x0062] = Op::LD8(Destination8::R(Registers8::H), Destination8::R(Registers8::D));
+    instructions[0x0063] = Op::LD8(Destination8::R(Registers8::H), Destination8::R(Registers8::E));
+    instructions[0x0064] = Op::LD8(Destination8::R(Registers8::H), Destination8::R(Registers8::H));
+    instructions[0x0065] = Op::LD8(Destination8::R(Registers8::H), Destination8::R(Registers8::L));
+    instructions[0x0066] = Op::LD8(Destination8::R(Registers8::H), Destination8::Mem(Registers16::HL));
+    instructions[0x0067] = Op::LD8(Destination8::R(Registers8::H), Destination8::R(Registers8::A));
+    instructions[0x0068] = Op::LD8(Destination8::R(Registers8::L), Destination8::R(Registers8::B));
+    instructions[0x0069] = Op::LD8(Destination8::R(Registers8::L), Destination8::R(Registers8::C));
+    instructions[0x006A] = Op::LD8(Destination8::R(Registers8::L), Destination8::R(Registers8::D));
+    instructions[0x006B] = Op::LD8(Destination8::R(Registers8::L), Destination8::R(Registers8::E));
+    instructions[0x006C] = Op::LD8(Destination8::R(Registers8::L), Destination8::R(Registers8::H));
+    instructions[0x006D] = Op::LD8(Destination8::R(Registers8::L), Destination8::R(Registers8::L));
+    instructions[0x006E] = Op::LD8(Destination8::R(Registers8::L), Destination8::Mem(Registers16::HL));
+    instructions[0x006F] = Op::LD8(Destination8::R(Registers8::L), Destination8::R(Registers8::A));
 
-    instructions[0x0070] = Op::Load8(Destination8::Mem(Registers16::HL), Destination8::R(Registers8::B));
-    instructions[0x0071] = Op::Load8(Destination8::Mem(Registers16::HL), Destination8::R(Registers8::C));
-    instructions[0x0072] = Op::Load8(Destination8::Mem(Registers16::HL), Destination8::R(Registers8::D));
-    instructions[0x0073] = Op::Load8(Destination8::Mem(Registers16::HL), Destination8::R(Registers8::E));
-    instructions[0x0074] = Op::Load8(Destination8::Mem(Registers16::HL), Destination8::R(Registers8::H));
-    instructions[0x0075] = Op::Load8(Destination8::Mem(Registers16::HL), Destination8::R(Registers8::L));
-    instructions[0x0076] = Op::Halt;
-    instructions[0x0077] = Op::Load8(Destination8::Mem(Registers16::HL), Destination8::R(Registers8::A));
-    instructions[0x0078] = Op::Load8(Destination8::R(Registers8::A), Destination8::R(Registers8::B));
-    instructions[0x0079] = Op::Load8(Destination8::R(Registers8::A), Destination8::R(Registers8::C));
-    instructions[0x007A] = Op::Load8(Destination8::R(Registers8::A), Destination8::R(Registers8::D));
-    instructions[0x007B] = Op::Load8(Destination8::R(Registers8::A), Destination8::R(Registers8::E));
-    instructions[0x007C] = Op::Load8(Destination8::R(Registers8::A), Destination8::R(Registers8::H));
-    instructions[0x007D] = Op::Load8(Destination8::R(Registers8::A), Destination8::R(Registers8::L));
-    instructions[0x007E] = Op::Load8(Destination8::R(Registers8::A), Destination8::Mem(Registers16::HL));
-    instructions[0x007F] = Op::Load8(Destination8::R(Registers8::A), Destination8::R(Registers8::A));
+    instructions[0x0070] = Op::LD8(Destination8::Mem(Registers16::HL), Destination8::R(Registers8::B));
+    instructions[0x0071] = Op::LD8(Destination8::Mem(Registers16::HL), Destination8::R(Registers8::C));
+    instructions[0x0072] = Op::LD8(Destination8::Mem(Registers16::HL), Destination8::R(Registers8::D));
+    instructions[0x0073] = Op::LD8(Destination8::Mem(Registers16::HL), Destination8::R(Registers8::E));
+    instructions[0x0074] = Op::LD8(Destination8::Mem(Registers16::HL), Destination8::R(Registers8::H));
+    instructions[0x0075] = Op::LD8(Destination8::Mem(Registers16::HL), Destination8::R(Registers8::L));
+    instructions[0x0076] = Op::HALT;
+    instructions[0x0077] = Op::LD8(Destination8::Mem(Registers16::HL), Destination8::R(Registers8::A));
+    instructions[0x0078] = Op::LD8(Destination8::R(Registers8::A), Destination8::R(Registers8::B));
+    instructions[0x0079] = Op::LD8(Destination8::R(Registers8::A), Destination8::R(Registers8::C));
+    instructions[0x007A] = Op::LD8(Destination8::R(Registers8::A), Destination8::R(Registers8::D));
+    instructions[0x007B] = Op::LD8(Destination8::R(Registers8::A), Destination8::R(Registers8::E));
+    instructions[0x007C] = Op::LD8(Destination8::R(Registers8::A), Destination8::R(Registers8::H));
+    instructions[0x007D] = Op::LD8(Destination8::R(Registers8::A), Destination8::R(Registers8::L));
+    instructions[0x007E] = Op::LD8(Destination8::R(Registers8::A), Destination8::Mem(Registers16::HL));
+    instructions[0x007F] = Op::LD8(Destination8::R(Registers8::A), Destination8::R(Registers8::A));
  
-    instructions[0x0080] = Op::Add(Destination8::R(Registers8::B));
-    instructions[0x0081] = Op::Add(Destination8::R(Registers8::C));
-    instructions[0x0082] = Op::Add(Destination8::R(Registers8::D));
-    instructions[0x0083] = Op::Add(Destination8::R(Registers8::E));
-    instructions[0x0084] = Op::Add(Destination8::R(Registers8::H));
-    instructions[0x0085] = Op::Add(Destination8::R(Registers8::L));
-    instructions[0x0086] = Op::Add(Destination8::Mem(Registers16::HL));
-    instructions[0x0087] = Op::Add(Destination8::R(Registers8::A));
-    instructions[0x0088] = Op::Adc(Destination8::R(Registers8::B));
-    instructions[0x0089] = Op::Adc(Destination8::R(Registers8::C));
-    instructions[0x008A] = Op::Adc(Destination8::R(Registers8::D));
-    instructions[0x008B] = Op::Adc(Destination8::R(Registers8::E));
-    instructions[0x008C] = Op::Adc(Destination8::R(Registers8::H));
-    instructions[0x008D] = Op::Adc(Destination8::R(Registers8::L));
-    instructions[0x008E] = Op::Adc(Destination8::Mem(Registers16::HL));
-    instructions[0x008F] = Op::Adc(Destination8::R(Registers8::A));
+    instructions[0x0080] = Op::ADD(Destination8::R(Registers8::B));
+    instructions[0x0081] = Op::ADD(Destination8::R(Registers8::C));
+    instructions[0x0082] = Op::ADD(Destination8::R(Registers8::D));
+    instructions[0x0083] = Op::ADD(Destination8::R(Registers8::E));
+    instructions[0x0084] = Op::ADD(Destination8::R(Registers8::H));
+    instructions[0x0085] = Op::ADD(Destination8::R(Registers8::L));
+    instructions[0x0086] = Op::ADD(Destination8::Mem(Registers16::HL));
+    instructions[0x0087] = Op::ADD(Destination8::R(Registers8::A));
+    instructions[0x0088] = Op::ADC(Destination8::R(Registers8::B));
+    instructions[0x0089] = Op::ADC(Destination8::R(Registers8::C));
+    instructions[0x008A] = Op::ADC(Destination8::R(Registers8::D));
+    instructions[0x008B] = Op::ADC(Destination8::R(Registers8::E));
+    instructions[0x008C] = Op::ADC(Destination8::R(Registers8::H));
+    instructions[0x008D] = Op::ADC(Destination8::R(Registers8::L));
+    instructions[0x008E] = Op::ADC(Destination8::Mem(Registers16::HL));
+    instructions[0x008F] = Op::ADC(Destination8::R(Registers8::A));
 
-    instructions[0x0090] = Op::Sub(Destination8::R(Registers8::B));
-    instructions[0x0091] = Op::Sub(Destination8::R(Registers8::C));
-    instructions[0x0092] = Op::Sub(Destination8::R(Registers8::D));
-    instructions[0x0093] = Op::Sub(Destination8::R(Registers8::E));
-    instructions[0x0094] = Op::Sub(Destination8::R(Registers8::H));
-    instructions[0x0095] = Op::Sub(Destination8::R(Registers8::L));
-    instructions[0x0096] = Op::Sub(Destination8::Mem(Registers16::HL));
-    instructions[0x0097] = Op::Sub(Destination8::R(Registers8::A));
-    instructions[0x0098] = Op::Sbc(Destination8::R(Registers8::B));
-    instructions[0x0099] = Op::Sbc(Destination8::R(Registers8::C));
-    instructions[0x009A] = Op::Sbc(Destination8::R(Registers8::D));
-    instructions[0x009B] = Op::Sbc(Destination8::R(Registers8::E));
-    instructions[0x009C] = Op::Sbc(Destination8::R(Registers8::H));
-    instructions[0x009D] = Op::Sbc(Destination8::R(Registers8::L));
-    instructions[0x009E] = Op::Sbc(Destination8::Mem(Registers16::HL));
-    instructions[0x009F] = Op::Sbc(Destination8::R(Registers8::A));
+    instructions[0x0090] = Op::SUB(Destination8::R(Registers8::B));
+    instructions[0x0091] = Op::SUB(Destination8::R(Registers8::C));
+    instructions[0x0092] = Op::SUB(Destination8::R(Registers8::D));
+    instructions[0x0093] = Op::SUB(Destination8::R(Registers8::E));
+    instructions[0x0094] = Op::SUB(Destination8::R(Registers8::H));
+    instructions[0x0095] = Op::SUB(Destination8::R(Registers8::L));
+    instructions[0x0096] = Op::SUB(Destination8::Mem(Registers16::HL));
+    instructions[0x0097] = Op::SUB(Destination8::R(Registers8::A));
+    instructions[0x0098] = Op::SBC(Destination8::R(Registers8::B));
+    instructions[0x0099] = Op::SBC(Destination8::R(Registers8::C));
+    instructions[0x009A] = Op::SBC(Destination8::R(Registers8::D));
+    instructions[0x009B] = Op::SBC(Destination8::R(Registers8::E));
+    instructions[0x009C] = Op::SBC(Destination8::R(Registers8::H));
+    instructions[0x009D] = Op::SBC(Destination8::R(Registers8::L));
+    instructions[0x009E] = Op::SBC(Destination8::Mem(Registers16::HL));
+    instructions[0x009F] = Op::SBC(Destination8::R(Registers8::A));
 
     instructions[0x00A0] = Op::AND(Destination8::R(Registers8::B));
     instructions[0x00A1] = Op::AND(Destination8::R(Registers8::C));
@@ -1467,61 +1457,61 @@ pub fn new() -> Instructions {
     instructions[0x00B5] = Op::OR(Destination8::R(Registers8::L));
     instructions[0x00B6] = Op::OR(Destination8::Mem(Registers16::HL));
     instructions[0x00B7] = Op::OR(Destination8::R(Registers8::A));
-    instructions[0x00B8] = Op::Compare(Destination8::R(Registers8::B));
-    instructions[0x00B9] = Op::Compare(Destination8::R(Registers8::C));
-    instructions[0x00BA] = Op::Compare(Destination8::R(Registers8::D));
-    instructions[0x00BB] = Op::Compare(Destination8::R(Registers8::E));
-    instructions[0x00BC] = Op::Compare(Destination8::R(Registers8::H));
-    instructions[0x00BD] = Op::Compare(Destination8::R(Registers8::L));
-    instructions[0x00BE] = Op::Compare(Destination8::Mem(Registers16::HL));
-    instructions[0x00BF] = Op::Compare(Destination8::R(Registers8::A));
+    instructions[0x00B8] = Op::CP(Destination8::R(Registers8::B));
+    instructions[0x00B9] = Op::CP(Destination8::R(Registers8::C));
+    instructions[0x00BA] = Op::CP(Destination8::R(Registers8::D));
+    instructions[0x00BB] = Op::CP(Destination8::R(Registers8::E));
+    instructions[0x00BC] = Op::CP(Destination8::R(Registers8::H));
+    instructions[0x00BD] = Op::CP(Destination8::R(Registers8::L));
+    instructions[0x00BE] = Op::CP(Destination8::Mem(Registers16::HL));
+    instructions[0x00BF] = Op::CP(Destination8::R(Registers8::A));
 
-    instructions[0x00C0] = Op::Ret(Some(CheckFlag::NZ));
-    instructions[0x00C1] = Op::Pop(Registers16::BC);
+    instructions[0x00C0] = Op::RET(Some(CheckFlag::NZ));
+    instructions[0x00C1] = Op::POP(Registers16::BC);
     instructions[0x00C2] = Op::JP(JpArgs::CheckFlag(CheckFlag::NZ));
     instructions[0x00C3] = Op::JP(JpArgs::N);
-    instructions[0x00C4] = Op::Call(Some(CheckFlag::NZ));
-    instructions[0x00C5] = Op::Push(Registers16::BC);
-    instructions[0x00C6] = Op::Add(Destination8::N);
+    instructions[0x00C4] = Op::CALL(Some(CheckFlag::NZ));
+    instructions[0x00C5] = Op::PUSH(Registers16::BC);
+    instructions[0x00C6] = Op::ADD(Destination8::N);
     instructions[0x00C7] = Op::RST(RstArgs::H00);
-    instructions[0x00C8] = Op::Ret(Some(CheckFlag::Z));
-    instructions[0x00C9] = Op::Ret(None);
+    instructions[0x00C8] = Op::RET(Some(CheckFlag::Z));
+    instructions[0x00C9] = Op::RET(None);
     instructions[0x00CA] = Op::JP(JpArgs::CheckFlag(CheckFlag::Z));
     instructions[0x00CB] = Op::PrefixCB;
-    instructions[0x00CC] = Op::Call(Some(CheckFlag::Z));
-    instructions[0x00CD] = Op::Call(None);
-    instructions[0x00CE] = Op::Adc(Destination8::N);
+    instructions[0x00CC] = Op::CALL(Some(CheckFlag::Z));
+    instructions[0x00CD] = Op::CALL(None);
+    instructions[0x00CE] = Op::ADC(Destination8::N);
     instructions[0x00CF] = Op::RST(RstArgs::H08);
 
-    instructions[0x00D0] = Op::Ret(Some(CheckFlag::NC));
-    instructions[0x00D1] = Op::Pop(Registers16::DE);
+    instructions[0x00D0] = Op::RET(Some(CheckFlag::NC));
+    instructions[0x00D1] = Op::POP(Registers16::DE);
     instructions[0x00D2] = Op::JP(JpArgs::CheckFlag(CheckFlag::NC));
     instructions[0x00D3] = Op::NotImplemented;
-    instructions[0x00D4] = Op::Call(Some(CheckFlag::Z));
-    instructions[0x00D5] = Op::Push(Registers16::DE);
-    instructions[0x00D6] = Op::Sub(Destination8::N);
+    instructions[0x00D4] = Op::CALL(Some(CheckFlag::Z));
+    instructions[0x00D5] = Op::PUSH(Registers16::DE);
+    instructions[0x00D6] = Op::SUB(Destination8::N);
     instructions[0x00D7] = Op::RST(RstArgs::H10);
-    instructions[0x00D8] = Op::Ret(Some(CheckFlag::C));
-    instructions[0x00D9] = Op::RetI;
+    instructions[0x00D8] = Op::RET(Some(CheckFlag::C));
+    instructions[0x00D9] = Op::RETI;
     instructions[0x00DA] = Op::JP(JpArgs::CheckFlag(CheckFlag::C));
     instructions[0x00DB] = Op::NotImplemented;
-    instructions[0x00DC] = Op::Call(Some(CheckFlag::C));
+    instructions[0x00DC] = Op::CALL(Some(CheckFlag::C));
     instructions[0x00DD] = Op::NotImplemented;
-    instructions[0x00DE] = Op::Sbc(Destination8::N);
+    instructions[0x00DE] = Op::SBC(Destination8::N);
     instructions[0x00DF] = Op::RST(RstArgs::H18);
 
     instructions[0x00E0] = Op::LoadFF00(LoadFF00Targets::N, LoadFF00Targets::A);
-    instructions[0x00E1] = Op::Pop(Registers16::HL);
+    instructions[0x00E1] = Op::POP(Registers16::HL);
     instructions[0x00E2] = Op::LoadFF00(LoadFF00Targets::C, LoadFF00Targets::A);
     instructions[0x00E3] = Op::NotImplemented;
     instructions[0x00E4] = Op::NotImplemented;
-    instructions[0x00E5] = Op::Push(Registers16::HL);
+    instructions[0x00E5] = Op::PUSH(Registers16::HL);
     instructions[0x00E6] = Op::AND(Destination8::N);
     instructions[0x00E7] = Op::RST(RstArgs::H20);
     // Note that this instruction actually takes a signed 8bit value
-    // instructions[0x00E8] = Op::Add16(Add16Args::R(Registers16::SP), Add16Args::N);
+    // instructions[0x00E8] = Op::ADD16(ADD16Args::R(Registers16::SP), ADD16Args::N);
     instructions[0x00E9] = Op::JP(JpArgs::HL);
-    instructions[0x00EA] = Op::Load8(Destination8::N, Destination8::R(Registers8::A));
+    instructions[0x00EA] = Op::LD8(Destination8::N, Destination8::R(Registers8::A));
     instructions[0x00EB] = Op::NotImplemented;
     instructions[0x00EC] = Op::NotImplemented;
     instructions[0x00ED] = Op::NotImplemented;
@@ -1529,20 +1519,20 @@ pub fn new() -> Instructions {
     instructions[0x00EF] = Op::RST(RstArgs::H28);
 
     instructions[0x00F0] = Op::LoadFF00(LoadFF00Targets::A, LoadFF00Targets::N);
-    instructions[0x00F1] = Op::Pop(Registers16::AF);
+    instructions[0x00F1] = Op::POP(Registers16::AF);
     instructions[0x00F2] = Op::LoadFF00(LoadFF00Targets::A, LoadFF00Targets::C);
     instructions[0x00F3] = Op::DI;
     instructions[0x00F4] = Op::NotImplemented;
-    instructions[0x00F5] = Op::Push(Registers16::AF);
+    instructions[0x00F5] = Op::PUSH(Registers16::AF);
     instructions[0x00F6] = Op::OR(Destination8::N);
     instructions[0x00F7] = Op::RST(RstArgs::H30);
     // instructions[0x00F8] = LD HL,SP+r8
-    instructions[0x00F9] = Op::Load16(Destination16::R(Registers16::SP), Destination16::R(Registers16::HL));
-    instructions[0x00FA] = Op::Load8(Destination8::R(Registers8::A), Destination8::N);
+    instructions[0x00F9] = Op::LD16(Destination16::R(Registers16::SP), Destination16::R(Registers16::HL));
+    instructions[0x00FA] = Op::LD8(Destination8::R(Registers8::A), Destination8::N);
     instructions[0x00FB] = Op::EI;
     instructions[0x00FC] = Op::NotImplemented;
     instructions[0x00FD] = Op::NotImplemented;
-    instructions[0x00FE] = Op::Compare(Destination8::N);
+    instructions[0x00FE] = Op::CP(Destination8::N);
     instructions[0x00FF] = Op::RST(RstArgs::H38);
 
     let mut cb_instructions = vec![Op::NotImplemented; 256];

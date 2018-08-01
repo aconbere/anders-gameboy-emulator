@@ -100,7 +100,7 @@ impl CPU {
                 self.state = State::Prefix;
                 0
             }
-            instructions::Op::Halt => {
+            instructions::Op::HALT => {
                 self.state = State::Halted;
                 0
             }
