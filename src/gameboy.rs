@@ -30,12 +30,21 @@ pub struct Gameboy {
 }
 
 impl Gameboy {
-    /* Executes instructions (each of which returns the number of cycles
-     * it took) until the cycle count exceeds 70244. Gameboy frame timings are based on
-     * cycles and 70244 is the number of frames a gameboy takes to render a full frame.
+    pub fn get_pc(&self) -> u16 {
+        self.registers.get16(&registers::Registers16::PC)
+    }
+
+    pub fn set_log_instructions(&mut self, state: bool) {
+        self.cpu.set_log_instructions(state);
+    }
+
+    /* Executes an instruction (which returns the number of cycles it took) when the cycle count
+     * exceeds 70244 it returns true to signal that a new frame is available. Gameboy frame timings
+     * are based on cycles and 70244 is the number of frames a gameboy takes to render a full
+     * frame.
      *
-     * This function takes as its input a `framebuffer` which is an array of palette::Shades
-     * how to render a shade is up to the display.
+     * This function takes as its input a `framebuffer` which is an array of palette::Shades how to
+     * render a shade is up to the display.
      *
      * Returns true if a frame is ready.
      */

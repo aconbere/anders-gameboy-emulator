@@ -58,6 +58,7 @@ pub fn new<'a, 'b>(config: &config::Config) -> Display {
     let timer = sdl_context.timer().unwrap();
 
     Display {
+
         frame_count: 0,
         state: State::Running(RunningState::Continuous),
         config: config.clone(),
@@ -99,14 +100,26 @@ impl Display {
         }
     }
 
-    fn break_at_frame(&mut self) {
+    fn break_at_frame(&mut self, gameboy: &mut gameboy::Gameboy) {
         match self.config.debug.break_point_frame {
             Some(bk) => {
                 if bk == self.frame_count {
-                    self.state = State::Paused
+                    self.state = State::Paused;
+                    gameboy.set_log_instructions(true);
                 }
             },
             _ => {}
+        }
+    }
+
+    fn break_at_pc(&mut self, gameboy: &gameboy::Gameboy) -> bool {
+        match self.config.debug.break_point_pc {
+            Some(bk) => {
+                bk == gameboy.get_pc()
+            },
+            _ => {
+                false
+            }
         }
     }
 
@@ -131,6 +144,7 @@ impl Display {
                     if gameboy.next_instruction(&mut framebuffer) {
                         self.frame_count += 1;
                     }
+
                     canvas::draw(&mut self.canvas, &framebuffer, self.scale);
 
                     if self.config.debug.frame_count {
@@ -157,7 +171,18 @@ impl Display {
                 }
                 State::Running(RunningState::Continuous) => {
                     'frameloop: loop {
-                        if gameboy.next_instruction(&mut framebuffer) {
+                        let new_frame = gameboy.next_instruction(&mut framebuffer);
+
+                        if self.break_at_pc(gameboy) {
+                            self.state = State::Paused;
+                            if new_frame {
+                                self.frame_count += 1;
+                            }
+                            gameboy.set_log_instructions(true);
+                            break 'frameloop
+                        }
+
+                        if new_frame {
                             self.frame_count += 1;
                             break 'frameloop
                         }
@@ -169,7 +194,7 @@ impl Display {
                         debug_text.draw(&mut self.canvas, &format!("F:{}", self.frame_count))
                     }
                     self.canvas.present();
-                    self.break_at_frame();
+                    self.break_at_frame(gameboy);
                 }
                 State::TileData => {
                     gameboy.render_tile_data(&mut framebuffer);

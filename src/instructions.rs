@@ -64,7 +64,7 @@ pub enum Op {
     LD16(Destination16, Destination16),
 
     INC8(Destination8),
-    Inc16(Destination16),
+    INC16(Destination16),
     DEC8(Destination8),
     DEC16(Destination16),
     OR(Destination8),
@@ -516,7 +516,7 @@ impl Op {
             Op::LD16(_, _) => 0,
 
             Op::INC8(_) => 0,
-            Op::Inc16(_) => 0,
+            Op::INC16(_) => 0,
             Op::DEC8(_) => 0,
             Op::DEC16(_) => 0,
             Op::LoadAndInc => 0,
@@ -798,15 +798,15 @@ impl Op {
             }
             Op::INC8(Destination8::N) => panic!("Not Implemented"),
 
-            Op::Inc16(Destination16::R(r)) => {
+            Op::INC16(Destination16::R(r)) => {
                 let v = registers.get16(r);
                 let n = v.wrapping_add(1);
 
                 registers.set16(r, n);
                 8
             }
-            Op::Inc16(Destination16::Mem(_)) => panic!("Not Implemented"),
-            Op::Inc16(Destination16::N) => panic!("Not Implemented"),
+            Op::INC16(Destination16::Mem(_)) => panic!("Not Implemented"),
+            Op::INC16(Destination16::N) => panic!("Not Implemented"),
 
             Op::DEC8(Destination8::R(r)) => {
                 let v = registers.get8(r);
@@ -1246,7 +1246,7 @@ pub fn new() -> Instructions {
     instructions[0x0000] = Op::NOP;
     instructions[0x0001] = Op::LD16(Destination16::R(Registers16::BC), Destination16::N);
     instructions[0x0002] = Op::LD8(Destination8::Mem(Registers16::BC), Destination8::R(Registers8::A));
-    instructions[0x0003] = Op::Inc16(Destination16::R(Registers16::BC));
+    instructions[0x0003] = Op::INC16(Destination16::R(Registers16::BC));
     instructions[0x0004] = Op::INC8(Destination8::R(Registers8::B));
     instructions[0x0005] = Op::DEC8(Destination8::R(Registers8::B));
     instructions[0x0006] = Op::LD8(Destination8::R(Registers8::B), Destination8::N);
@@ -1263,7 +1263,7 @@ pub fn new() -> Instructions {
     instructions[0x0010] = Op::STOP;
     instructions[0x0011] = Op::LD16(Destination16::R(Registers16::DE), Destination16::N);
     instructions[0x0012] = Op::LD8(Destination8::Mem(Registers16::DE), Destination8::R(Registers8::A));
-    instructions[0x0013] = Op::Inc16(Destination16::R(Registers16::DE));
+    instructions[0x0013] = Op::INC16(Destination16::R(Registers16::DE));
     instructions[0x0014] = Op::INC8(Destination8::R(Registers8::D));
     instructions[0x0015] = Op::DEC8(Destination8::R(Registers8::D));
     instructions[0x0016] = Op::LD8(Destination8::R(Registers8::D), Destination8::N);
@@ -1280,7 +1280,7 @@ pub fn new() -> Instructions {
     instructions[0x0020] = Op::JR(JrArgs::CheckFlag(CheckFlag::NZ));
     instructions[0x0021] = Op::LD16(Destination16::R(Registers16::HL), Destination16::N);
     instructions[0x0022] = Op::LoadAndInc;
-    instructions[0x0023] = Op::Inc16(Destination16::R(Registers16::HL));
+    instructions[0x0023] = Op::INC16(Destination16::R(Registers16::HL));
     instructions[0x0024] = Op::INC8(Destination8::R(Registers8::H));
     instructions[0x0025] = Op::DEC8(Destination8::R(Registers8::H));
     instructions[0x0026] = Op::LD8(Destination8::R(Registers8::H), Destination8::N);
@@ -1297,7 +1297,7 @@ pub fn new() -> Instructions {
     instructions[0x0030] = Op::JR(JrArgs::CheckFlag(CheckFlag::NC));
     instructions[0x0031] = Op::LD16(Destination16::R(Registers16::SP), Destination16::N);
     instructions[0x0032] = Op::LoadAndDec;
-    instructions[0x0033] = Op::Inc16(Destination16::R(Registers16::SP));
+    instructions[0x0033] = Op::INC16(Destination16::R(Registers16::SP));
     instructions[0x0034] = Op::INC8(Destination8::Mem(Registers16::HL));
     instructions[0x0035] = Op::DEC8(Destination8::Mem(Registers16::HL));
     instructions[0x0036] = Op::LD8(Destination8::Mem(Registers16::HL), Destination8::N);

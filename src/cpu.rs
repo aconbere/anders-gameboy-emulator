@@ -2,6 +2,8 @@ use config;
 use instructions;
 use mmu;
 use registers;
+use registers::Registers16;
+use registers::Flag;
 
 #[derive(PartialEq)]
 pub enum State {
@@ -12,7 +14,7 @@ pub enum State {
 
 pub struct CPU {
     state: State,
-    config: config::Config,
+    log_instructions: bool,
 }
 
 pub struct Context {
@@ -23,27 +25,47 @@ pub struct Context {
     args: Vec<u8>,
 }
 
-pub fn new_context() -> Context {
-    Context {
-        pc: 0,
-        cb: false,
-        opcode: 0,
-        instruction: instructions::Op::NotImplemented,
-        args: vec!()
+impl Context {
+    pub fn new() -> Context {
+        Context {
+            pc: 0,
+            cb: false,
+            opcode: 0,
+            instruction: instructions::Op::NotImplemented,
+            args: vec!()
+        }
     }
 }
 
-fn log_context(context: &Context) {
+fn log_context(context: &Context, registers: &registers::Registers) {
     let pc_f = format!("{:X}", context.pc);
     let cb_f = if context.cb { "CB-" } else { "" };
     let opcode_f = format!("{}{:X}", cb_f, context.opcode);
     let instruction_f = format!("{:?}", context.instruction);
     let args_f = format!("{:X?}", context.args);
 
+    let af = registers.get16(&Registers16::AF);
+    let bc = registers.get16(&Registers16::BC);
+    let de = registers.get16(&Registers16::DE);
+    let hl = registers.get16(&Registers16::HL);
+    let pc = registers.get16(&Registers16::PC);
+    let sp = registers.get16(&Registers16::SP);
+
+    let f_z = if registers.get_flag(Flag::Z) { "Z" } else { "-" };
+    let f_n = if registers.get_flag(Flag::N) { "N" } else { "-" };
+    let f_h = if registers.get_flag(Flag::H) { "H" } else { "-" };
+    let f_c = if registers.get_flag(Flag::C) { "C" } else { "-" };
+
     println!("pc: {:<4} | {:<4} | {:<20} | {:<10}", pc_f, opcode_f, instruction_f, args_f);
+    println!("AF: {:X} BC: {:X} DE: {:X} HL: {:X} PC: {:X} SP {:X}", af, bc, de, hl, pc, sp);
+    println!("[{}{}{}{}]", f_z, f_n, f_h, f_c);
 }
 
 impl CPU {
+    pub fn set_log_instructions(&mut self, state: bool) {
+        self.log_instructions = state;
+    }
+
     pub fn tick(
         &mut self,
         instructions: &instructions::Instructions,
@@ -52,12 +74,12 @@ impl CPU {
     ) -> u8 {
         match self.state {
             State::Running => {
-                let mut context = new_context();
+                let mut context = Context::new();
                 let instruction = self.fetch(&mut context, instructions, registers, mmu, false);
                 self.execute(&mut context, &instruction, registers, mmu)
             }
             State::Prefix => {
-                let mut context = new_context();
+                let mut context = Context::new();
                 let instruction = self.fetch(&mut context, instructions, registers, mmu, true);
                 self.execute(&mut context, &instruction, registers, mmu)
             }
@@ -73,7 +95,7 @@ impl CPU {
         mmu: &mut mmu::MMU,
         prefix: bool,
     ) -> instructions::Op {
-        let pc = registers.get16(&registers::Registers16::PC);
+        let pc = registers.get16(&Registers16::PC);
         let opcode = mmu.get(pc);
 
         context.pc = pc;
@@ -106,14 +128,14 @@ impl CPU {
             }
             instructions::Op::NotImplemented => {
                 context.cb = self.state == State::Prefix;
-                log_context(&context);
+                log_context(&context, &registers);
                 // panic!("Not Implemented");
                 0
             }
             _ => {
                 let mut args = Vec::new();
                 for _ in 0..instruction.args() {
-                    let next = registers.get16(&registers::Registers16::PC);
+                    let next = registers.get16(&Registers16::PC);
                     args.push(mmu.get(next));
                     registers.inc_pc()
                 }
@@ -123,8 +145,8 @@ impl CPU {
                 context.instruction = *instruction;
                 context.args = args;
                 context.cb = self.state == State::Prefix;
-                if self.config.debug.log_instructions {
-                    log_context(&context);
+                if self.log_instructions {
+                    log_context(&context, &registers);
                 }
                 self.state = State::Running;
                 cycles
@@ -136,6 +158,6 @@ impl CPU {
 pub fn new(config: config::Config) -> CPU {
     CPU {
         state: State::Running,
-        config: config,
+        log_instructions: config.debug.log_instructions,
     }
 }

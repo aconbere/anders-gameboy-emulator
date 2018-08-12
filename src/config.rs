@@ -6,7 +6,7 @@ use std::io;
 pub struct Debug {
     pub frame_count: bool,
     pub log_instructions: bool,
-    pub break_point_pc: Option<u32>,
+    pub break_point_pc: Option<u16>,
     pub break_point_frame: Option<u32>,
     pub repl: bool,
 }
@@ -14,12 +14,12 @@ pub struct Debug {
 pub fn new_debug(
     frame_count:bool,
     log_instructions:bool,
-    break_point_pc: Option<&str>,
     break_point_frame: Option<&str>,
+    break_point_pc: Option<&str>,
     repl: bool,
 ) -> Result<Debug, String> {
-    let bk_pc = break_point_pc.map(|r| u32::from_str_radix(r, 16).unwrap());
-    let bk_frame = break_point_pc.map(|r| u32::from_str_radix(r, 16).unwrap());
+    let bk_pc = break_point_pc.map(|r| u16::from_str_radix(r, 16).unwrap());
+    let bk_frame = break_point_frame.map(|r| u32::from_str_radix(r, 16).unwrap());
 
     Ok(Debug {
             frame_count: frame_count,
