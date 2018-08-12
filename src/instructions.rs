@@ -416,7 +416,7 @@ fn check_half_carry_16_add(a: u16, b: u16) -> bool {
 }
 
 fn check_half_carry_8_sub(a: u8, b: u8) -> bool {
-    (a & 0xF0) < (b & 0xF0)
+    (a & 0xF0) > (b & 0xF0)
 }
 
 fn inc8(registers: &mut Registers, a: u8) -> u8 {

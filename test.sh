@@ -18,4 +18,4 @@ cargo run -- \
   --game_rom ../blarggs-tests/cpu_instrs/source/test.gb \
   debug \
     --log_instructions \
-    --break_point_pc 00A3
+    --break_point_pc 002E
