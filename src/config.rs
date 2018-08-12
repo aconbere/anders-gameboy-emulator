@@ -8,6 +8,7 @@ pub struct Debug {
     pub log_instructions: bool,
     pub break_point_pc: Option<u32>,
     pub break_point_frame: Option<u32>,
+    pub repl: bool,
 }
 
 pub fn new_debug(
@@ -15,6 +16,7 @@ pub fn new_debug(
     log_instructions:bool,
     break_point_pc: Option<&str>,
     break_point_frame: Option<&str>,
+    repl: bool,
 ) -> Result<Debug, String> {
     let bk_pc = break_point_pc.map(|r| u32::from_str_radix(r, 16).unwrap());
     let bk_frame = break_point_pc.map(|r| u32::from_str_radix(r, 16).unwrap());
@@ -24,6 +26,7 @@ pub fn new_debug(
             log_instructions: log_instructions,
             break_point_pc: bk_pc,
             break_point_frame: bk_frame,
+            repl: repl,
         })
 }
 
@@ -33,6 +36,7 @@ pub fn debug_default() -> Debug {
         log_instructions: false,
         break_point_pc: None,
         break_point_frame: None,
+        repl: false,
     }
 }
 
@@ -61,7 +65,7 @@ pub fn new(
     boot_rom_path:&str,
     game_rom_path:&str,
     debug: Debug
-    ) -> Result<Config, String> {
+) -> Result<Config, String> {
     if !Path::new(boot_rom_path).exists() {
         return Err(format!("Boot rom path does not exist: {}", boot_rom_path));
     }
@@ -75,12 +79,4 @@ pub fn new(
         game_rom: String::from(game_rom_path),
         debug: debug,
     })
-}
-
-pub fn zero() -> Config {
-    Config {
-        boot_rom: String::from("test"),
-        game_rom: String::from("test"),
-        debug: debug_default(),
-    }
 }

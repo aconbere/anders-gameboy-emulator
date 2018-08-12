@@ -15,6 +15,7 @@ mod mmu;
 mod palette;
 mod registers;
 mod config;
+mod repl;
 
 fn main() {
     let matches = clap_app!(anders_gameboy_emulator =>
@@ -28,6 +29,7 @@ fn main() {
             (@arg LOG_INSTRUCTIONS: --log_instructions "Print each instruction to stdout.")
             (@arg BREAK_POINT_FRAME: --break_point_frame +takes_value "Frame to pause instruction at.")
             (@arg BREAK_POINT_PC: --break_point_pc +takes_value "Frame to pause instruction at.")
+            (@arg REPL: --repl "Boots the emulator into debug mode.")
         )
     ).get_matches();
 
@@ -37,6 +39,7 @@ fn main() {
             debug_matches.is_present("LOG_INSTRUCTIONS"),
             debug_matches.value_of("BREAK_POINT_FRAME"),
             debug_matches.value_of("BREAK_POINT_PC"),
+            debug_matches.is_present("REPL"),
         ).unwrap(),
 
         None => config::debug_default(),

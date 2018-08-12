@@ -30,46 +30,44 @@ pub struct Gameboy {
 }
 
 impl Gameboy {
-    /* Continuously executes instructions (each of which returns the number of cycles
+    /* Executes instructions (each of which returns the number of cycles
      * it took) until the cycle count exceeds 70244. Gameboy frame timings are based on
      * cycles and 70244 is the number of frames a gameboy takes to render a full frame.
      *
      * This function takes as its input a `framebuffer` which is an array of palette::Shades
      * how to render a shade is up to the display.
+     *
+     * Returns true if a frame is ready.
      */
-    pub fn next_frame(&mut self, framebuffer: &mut framebuffer::Framebuffer) {
-        loop {
-            let m = &mut self.mmu;
-            let r = &mut self.registers;
+    pub fn next_instruction(&mut self, framebuffer: &mut framebuffer::Framebuffer) -> bool {
+        let cycles = self.cpu.tick(&self.instructions, &mut self.registers, &mut self.mmu);
 
-            let cycles = self.cpu.tick(&self.instructions, r, m);
+        if self.mmu.hardware_io
+            .lcd_control_register
+            .get_flag(device::hardware_io::LCDControlFlag::LCDDisplayEnable)
+        {
+            self.gpu.tick(&mut self.mmu, cycles, framebuffer);
+        }
 
-            if m.hardware_io
-                .lcd_control_register
-                .get_flag(device::hardware_io::LCDControlFlag::LCDDisplayEnable)
-            {
-                self.gpu.tick(m, cycles, framebuffer);
+        if self.registers.get_interrupts_enabled() {
+            let enabled = self.mmu.interrupt_enable.get_enabled_interrupts();
+            let interrupts = self.mmu.hardware_io.interrupts.get_interrupts(enabled);
+
+            for i in interrupts {
+                self.registers.set_interrupts_enabled(false);
+                interrupt::handle_interrupt(&mut self.registers, &mut self.mmu, i);
             }
+        }
 
-            if r.get_interrupts_enabled() {
-                let enabled = m.interrupt_enable.get_enabled_interrupts();
-                let interrupts = m.hardware_io.interrupts.get_interrupts(enabled);
+        self.cycle_count += cycles as u32;
 
-                for i in interrupts {
-                    r.set_interrupts_enabled(false);
-                    interrupt::handle_interrupt(r, m, i);
-                }
-            }
-
-            self.cycle_count += cycles as u32;
-
-            if self.cycle_count >= 70244 {
-                /* if we crossed 70244 we want to loop back around
-                 */
-                self.cycle_count -= 70244;
-                break;
-            }
-
+        if self.cycle_count >= 70244 {
+            /* if we crossed 70244 we want to loop back around
+             */
+            self.cycle_count -= 70244;
+            true
+        } else {
+            false
         }
     }
 
