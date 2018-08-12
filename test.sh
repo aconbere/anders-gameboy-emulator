@@ -12,11 +12,10 @@ pushd ../blarggs-tests/cpu_instrs/source
 # ./build.sh "11-op a,(hl)"
 
 popd
-cargo run -- --boot_rom ../gb_test_roms/DMG_ROM.bin --game_rom ../blarggs-tests/cpu_instrs/source/test.gb
-# cargo run -- \
-#   --boot_rom ../gb_test_roms/DMG_ROM.bin \
-#   --game_rom ../blarggs-tests/cpu_instrs/source/test.gb \
-#   debug \
-#     --log_instructions \
-#     --frame_count
-
+# cargo run -- --boot_rom ../gb_test_roms/DMG_ROM.bin --game_rom ../blarggs-tests/cpu_instrs/source/test.gb
+cargo run -- \
+  --boot_rom ../gb_test_roms/DMG_ROM.bin \
+  --game_rom ../blarggs-tests/cpu_instrs/source/test.gb \
+  debug \
+    --log_instructions \
+    --break_point_pc 00A3

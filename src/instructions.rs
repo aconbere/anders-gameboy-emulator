@@ -168,7 +168,7 @@ fn res(v: u8, n: u8) -> u8 {
 fn bit(registers:&mut Registers, v:u8, location:u8) -> bool {
     let out = bytes::check_bit(v, location);
 
-    registers.set_flag(Flag::Z, out);
+    registers.set_flag(Flag::Z, !out);
     registers.set_flag(Flag::N, false);
     registers.set_flag(Flag::H, true);
     
@@ -334,7 +334,13 @@ fn ret(registers: &mut Registers, mmu: &mmu::MMU) {
 }
 
 fn dec8(registers: &mut Registers, a: u8) -> u8 {
-    sub(registers, a, 1)
+    let n = a.wrapping_sub(1);
+
+    registers.set_flag(Flag::Z, n == 0);
+    registers.set_flag(Flag::N, true);
+    registers.set_flag(Flag::H, check_half_carry_8_sub(a, 1));
+
+    n
 }
 
 fn dec16(_registers: &mut Registers, v: u16) -> u16 {
