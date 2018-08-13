@@ -420,7 +420,13 @@ fn check_half_carry_sub_8(a: u8, b: u8) -> bool {
 }
 
 fn inc8(registers: &mut Registers, a: u8) -> u8 {
-    add(registers, a, 1)
+    let out = a.wrapping_add(1);
+
+    registers.set_flag(Flag::Z, out == 0);
+    registers.set_flag(Flag::N, false);
+    registers.set_flag(Flag::H, check_half_carry_add_8(a,1));
+
+    out
 }
 
 fn add(registers: &mut Registers, a: u8, v: u8) -> u8 {
@@ -982,8 +988,6 @@ impl Op {
                 let out = add(registers, a, v);
 
                 registers.set8(&Registers8::A, out);
-
-                println!("A: {:X}, M: {:X}, V: {:X}, OUT: {:X}", a, m, v, out);
 
                 8
             }

@@ -17,5 +17,5 @@ cargo run -- \
   --boot_rom ../gb_test_roms/DMG_ROM.bin \
   --game_rom ../blarggs-tests/cpu_instrs/source/test.gb \
   debug \
-    --break_point_pc 00EC
+    --break_point_pc $1
     #--log_instructions \

@@ -80,9 +80,9 @@ impl MMU {
                     println!("can't write to cartridge rom address: {:X} value: {:X}", address, v)
                 }
             },
-            device::Kind::CartridgeHeader => println!("can't write to cartridge header address: {:X}, value: {:X}", address, v),
-            device::Kind::CartridgeROMBank0
-            | device::Kind::CartridgeROMBank1 => self.cartridge.set(address, v),
+            device::Kind::CartridgeHeader
+            | device::Kind::CartridgeROMBank0
+            | device::Kind::CartridgeROMBank1 => panic!("can't write to cartridge header address: {:X}, value: {:X}", address, v),
 
             device::Kind::TileData1 => self.tile_data_1.set(address - 0x8000, v),
             device::Kind::TileData2 => self.tile_data_2.set(address - 0x8800, v),
