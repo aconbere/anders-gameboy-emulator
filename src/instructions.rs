@@ -338,7 +338,7 @@ fn dec8(registers: &mut Registers, a: u8) -> u8 {
 
     registers.set_flag(Flag::Z, n == 0);
     registers.set_flag(Flag::N, true);
-    registers.set_flag(Flag::H, check_half_carry_8_sub(a, 1));
+    registers.set_flag(Flag::H, check_half_carry_sub_8(a, 1));
 
     n
 }
@@ -384,7 +384,7 @@ fn sub(registers: &mut Registers, a: u8, v: u8) -> u8 {
 
     registers.set_flag(Flag::Z, n == 0);
     registers.set_flag(Flag::N, true);
-    registers.set_flag(Flag::H, check_half_carry_8_sub(a, v));
+    registers.set_flag(Flag::H, check_half_carry_sub_8(a, v));
     registers.set_flag(Flag::C, n > a);
 
     n
@@ -401,22 +401,22 @@ fn sbc(registers: &mut Registers, a: u8, v: u8) -> u8 {
 
     registers.set_flag(Flag::Z, n == 0);
     registers.set_flag(Flag::N, true);
-    registers.set_flag(Flag::H, check_half_carry_8_sub(a, v));
+    registers.set_flag(Flag::H, check_half_carry_sub_8(a, v));
     registers.set_flag(Flag::C, n > a);
 
     n
 }
 
-fn check_half_carry_8_add(a: u8, b: u8) -> bool {
-    (((a & 0xF) + (b & 0xF)) & 0x10) == 0x10
+fn check_half_carry_add_8(a: u8, b: u8) -> bool {
+    (((a & 0x0F) + (b & 0x0F)) & 0x10) == 0x10
 }
 
-fn check_half_carry_16_add(a: u16, b: u16) -> bool {
+fn check_half_carry_add_16(a: u16, b: u16) -> bool {
     (a & 0x0FFF) + (b & 0x0FFF) > 0x0FFF
 }
 
-fn check_half_carry_8_sub(a: u8, b: u8) -> bool {
-    (a & 0xF0) > (b & 0xF0)
+fn check_half_carry_sub_8(a: u8, b: u8) -> bool {
+    (a & 0x0F) < (b & 0x0F)
 }
 
 fn inc8(registers: &mut Registers, a: u8) -> u8 {
@@ -428,7 +428,7 @@ fn add(registers: &mut Registers, a: u8, v: u8) -> u8 {
 
     registers.set_flag(Flag::Z, out == 0);
     registers.set_flag(Flag::N, false);
-    registers.set_flag(Flag::H, check_half_carry_8_add(a,v));
+    registers.set_flag(Flag::H, check_half_carry_add_8(a,v));
     registers.set_flag(Flag::C, out < a);
 
     out
@@ -445,7 +445,7 @@ fn adc(registers: &mut Registers, a: u8, v: u8) -> u8 {
 
     registers.set_flag(Flag::Z, n == 0);
     registers.set_flag(Flag::N, false);
-    registers.set_flag(Flag::H, check_half_carry_8_add(a, v));
+    registers.set_flag(Flag::H, check_half_carry_add_8(a, v));
     registers.set_flag(Flag::C, n < a);
 
     n
@@ -458,7 +458,7 @@ fn add16(registers: &mut Registers, destination: &Registers16, v: u16) {
 
     registers.set_flag(Flag::Z, n == 0);
     registers.set_flag(Flag::N, false);
-    registers.set_flag(Flag::H, check_half_carry_16_add(a, v));
+    registers.set_flag(Flag::H, check_half_carry_add_16(a, v));
     registers.set_flag(Flag::C, n < a);
 
     registers.set16(destination, n);
@@ -798,7 +798,6 @@ impl Op {
                 let rm = registers.get16(r);
                 let v = mmu.get(rm);
                 let out = inc8(registers, v);
-
                 mmu.set(rm, out);
                 12
             }
@@ -825,7 +824,6 @@ impl Op {
                 let a = registers.get16(r);
                 let v = mmu.get(a);
                 let n = dec8(registers, v);
-
                 mmu.set(a, n);
                 12
             }
@@ -976,15 +974,16 @@ impl Op {
             }
 
             Op::ADD(Destination8::Mem(r)) => {
-                let ra = &Registers8::A;
-                let a = registers.get8(ra);
+                let a = registers.get8(&Registers8::A);
 
                 let m = registers.get16(r);
                 let v = mmu.get(m);
 
                 let out = add(registers, a, v);
 
-                registers.set8(ra, out);
+                registers.set8(&Registers8::A, out);
+
+                println!("A: {:X}, M: {:X}, V: {:X}, OUT: {:X}", a, m, v, out);
 
                 8
             }
