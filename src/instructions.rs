@@ -6,8 +6,16 @@ use registers::Registers16;
 use registers::Registers;
 use registers::Flag;
 
+
 #[derive(Debug, Clone, Copy)]
 pub enum Destination8 {
+    R(Registers8),
+    Mem(Registers16),
+    MemAtN,
+    N
+}
+
+pub enum LD8Args {
     R(Registers8),
     Mem(Registers16),
     N
@@ -521,6 +529,7 @@ impl Op {
 
             Op::LD8(_, Destination8::N) => 1,
             Op::LD8(Destination8::N, _) => 2,
+            Op::LD8(_, Destination8::MemAtN) => 2,
             Op::LD8(_, _) => 0,
 
             Op::LD16(_, Destination16::N) => 2,
@@ -634,13 +643,20 @@ impl Op {
                 let a = bytes::combine_little(args[0], args[1]);
                 let v = registers.get8(r);
                 mmu.set(a, v);
-                8
+                16
             }
             Op::LD8(Destination8::Mem(r1), Destination8::N) => {
                 let v = args[0];
                 let rm = registers.get16(r1);
                 mmu.set(rm, v);
                 12
+            }
+            Op::LD8(Destination8::R(r), Destination8::MemAtN) => {
+                let a = bytes::combine_little(args[0], args[1]);
+                let v = mmu.get(a);
+
+                registers.set8(r, v);
+                16
             }
             Op::LD8(_, _) => panic!("Not Implemented"),
 
@@ -808,6 +824,7 @@ impl Op {
                 12
             }
             Op::INC8(Destination8::N) => panic!("Not Implemented"),
+            Op::INC8(Destination8::MemAtN) => panic!("Not Implemented"),
 
             Op::INC16(Destination16::R(r)) => {
                 let v = registers.get16(r);
@@ -834,6 +851,7 @@ impl Op {
                 12
             }
             Op::DEC8(Destination8::N) => panic!("Not Implemented"),
+            Op::DEC8(Destination8::MemAtN) => panic!("Not Implemented"),
             Op::DEC16(Destination16::R(r)) => {
                 let v = registers.get16(r);
                 let n = dec16(registers, v);
@@ -859,6 +877,8 @@ impl Op {
                 compare(registers, v);
                 8
             }
+            Op::CP(Destination8::MemAtN) => panic!("Not Implemented"),
+
             Op::AND(Destination8::R(r)) => {
                 let v = registers.get8(r);
                 and(registers,v);
@@ -869,6 +889,7 @@ impl Op {
                 and(registers, args[0]);
                 8
             }
+            Op::AND(Destination8::MemAtN) => panic!("Not Implemented"),
 
             Op::OR(Destination8::R(r)) => {
                 let v = registers.get8(r);
@@ -882,6 +903,7 @@ impl Op {
                 8
             }
             Op::OR(Destination8::N) => panic!("Not Implemented"),
+            Op::OR(Destination8::MemAtN) => panic!("Not Implemented"),
 
             Op::XOR(Destination8::R(r)) => {
                 let v = registers.get8(r);
@@ -898,6 +920,8 @@ impl Op {
                 xor(registers, args[0]);
                 8
             }
+            Op::XOR(Destination8::MemAtN) => panic!("Not Implemented"),
+
 
             Op::SBC(Destination8::R(r)) => {
                 let ra = &Registers8::A;
@@ -928,6 +952,7 @@ impl Op {
                 registers.set8(ra, out);
                 4
             }
+            Op::SBC(Destination8::MemAtN) => panic!("Not Implemented"),
 
             Op::SUB(Destination8::R(r)) => {
                 let ra = &Registers8::A;
@@ -966,6 +991,7 @@ impl Op {
 
                 8
             }
+            Op::SUB(Destination8::MemAtN) => panic!("Not Implemented"),
 
             Op::ADD(Destination8::R(r)) => {
                 let ra = &Registers8::A;
@@ -1002,6 +1028,7 @@ impl Op {
                 registers.set8(ra, out);
                 4
             }
+            Op::ADD(Destination8::MemAtN) => panic!("Not Implemented"),
 
             Op::ADC(Destination8::R(r)) => {
                 let ra = &Registers8::A;
@@ -1037,6 +1064,7 @@ impl Op {
                 registers.set8(ra, out);
                 4
             }
+            Op::ADC(Destination8::MemAtN) => panic!("Not Implemented"),
 
             Op::ADD16(ADD16Args::R(r1), ADD16Args::R(r2)) => {
                 let v = registers.get16(r2);
@@ -1108,6 +1136,7 @@ impl Op {
                 16
             }
             Op::RLC(Destination8::N) => panic!("Not Implemented"),
+            Op::RLC(Destination8::MemAtN) => panic!("Not Implemented"),
 
             Op::RRC(Destination8::R(r)) => {
                 let v = registers.get8(r);
@@ -1123,6 +1152,7 @@ impl Op {
                 16
             }
             Op::RRC(Destination8::N) => panic!("Not Implemented"),
+            Op::RRC(Destination8::MemAtN) => panic!("Not Implemented"),
 
             Op::RL(Destination8::R(r)) => {
                 let v = registers.get8(r);
@@ -1130,6 +1160,7 @@ impl Op {
                 registers.set8(r, out);
                 8
             }
+            Op::RL(Destination8::MemAtN) => panic!("Not Implemented"),
             Op::RL(Destination8::Mem(_)) => panic!("Not Implemented"),
             Op::RL(Destination8::N) => panic!("Not Implemented"),
 
@@ -1146,6 +1177,7 @@ impl Op {
                 mmu.set(rm, out);
                 16
             }
+            Op::RR(Destination8::MemAtN) => panic!("Not Implemented"),
             Op::RR(Destination8::N) => panic!("Not Implemented"),
 
             Op::SLA(Destination8::R(r)) => {
@@ -1161,6 +1193,7 @@ impl Op {
                 mmu.set(rm, out);
                 16
             }
+            Op::SLA(Destination8::MemAtN) => panic!("Not Implemented"),
             Op::SLA(Destination8::N) => panic!("Not Implemented"),
 
             Op::SRA(Destination8::R(r)) => {
@@ -1176,6 +1209,7 @@ impl Op {
                 mmu.set(rm, out);
                 16
             }
+            Op::SRA(Destination8::MemAtN) => panic!("Not Implemented"),
             Op::SRA(Destination8::N) => panic!("Not Implemented"),
 
             Op::SWAP(Destination8::R(r)) => {
@@ -1191,6 +1225,7 @@ impl Op {
                 mmu.set(rm, out);
                 16
             }
+            Op::SWAP(Destination8::MemAtN) => panic!("Not Implemented"),
             Op::SWAP(Destination8::N) => panic!("Not Implemented"),
 
             Op::SRL(Destination8::R(r)) => {
@@ -1199,6 +1234,7 @@ impl Op {
                 registers.set8(r, out);
                 8
             }
+            Op::SRL(Destination8::MemAtN) => panic!("Not Implemented"),
             Op::SRL(Destination8::Mem(_)) => panic!("Not Implemented"),
             Op::SRL(Destination8::N) => panic!("Not Implemented"),
 
@@ -1208,6 +1244,7 @@ impl Op {
                 bit(registers, v, *location);
                 8
             }
+            Op::BIT(_, Destination8::MemAtN) => panic!("Not Implemented"),
             Op::BIT(_, Destination8::Mem(_)) => panic!("Not Implemented"),
             Op::BIT(_, Destination8::N) => panic!("Not Implemented"),
 
@@ -1217,6 +1254,7 @@ impl Op {
                 registers.set8(r, out);
                 8
             }
+            Op::RES(_, Destination8::MemAtN) => panic!("Not Implemented"),
             Op::RES(_, Destination8::Mem(_)) => panic!("Not Implemented"),
             Op::RES(_, Destination8::N) => panic!("Not Implemented"),
 
@@ -1226,6 +1264,7 @@ impl Op {
                 registers.set8(r, out);
                 8
             }
+            Op::SET(_, Destination8::MemAtN) => panic!("Not Implemented"),
             Op::SET(_, Destination8::Mem(_)) => panic!("Not Implemented"),
             Op::SET(_, Destination8::N) => panic!("Not Implemented"),
         }
@@ -1518,7 +1557,7 @@ pub fn new() -> Instructions {
     instructions[0x00F7] = Op::RST(RstArgs::H30);
     // instructions[0x00F8] = LD HL,SP+r8
     instructions[0x00F9] = Op::LD16(Destination16::R(Registers16::SP), Destination16::R(Registers16::HL));
-    instructions[0x00FA] = Op::LD8(Destination8::R(Registers8::A), Destination8::N);
+    instructions[0x00FA] = Op::LD8(Destination8::R(Registers8::A), Destination8::MemAtN);
     instructions[0x00FB] = Op::EI;
     instructions[0x00FC] = Op::NotImplemented;
     instructions[0x00FD] = Op::NotImplemented;

@@ -1,0 +1,2 @@
+C7E5 "ld a,(FF00+44)" loads the wrong value, should be 87 but we have 14
+C7EB (working)
