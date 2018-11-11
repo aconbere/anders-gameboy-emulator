@@ -15,6 +15,7 @@ pub enum State {
 pub struct CPU {
     state: State,
     log_instructions: bool,
+    log_register_states: bool,
 }
 
 pub struct Context {
@@ -37,12 +38,23 @@ impl Context {
     }
 }
 
+fn log_register_states(context: &Context, registers: &registers::Registers) {
+    let pc = registers.get16(&Registers16::PC);
+    let af = registers.get16(&Registers16::AF);
+    let bc = registers.get16(&Registers16::BC);
+    let de = registers.get16(&Registers16::DE);
+    let hl = registers.get16(&Registers16::HL);
+    let sp = registers.get16(&Registers16::SP);
+
+    println!("{:04X}{:04X}{:04X}{:04X}{:04X}{:04X}", pc, af, bc, de, hl, sp);
+}
+
 fn log_context(context: &Context, registers: &registers::Registers) {
-    let pc_f = format!("{:X}", context.pc);
+    let pc_f = format!("{:04X}", context.pc);
     let cb_f = if context.cb { "CB-" } else { "" };
-    let opcode_f = format!("{}{:X}", cb_f, context.opcode);
+    let opcode_f = format!("{}{:04X}", cb_f, context.opcode);
     let instruction_f = format!("{:?}", context.instruction);
-    let args_f = format!("{:X?}", context.args);
+    let args_f = format!("{:04X?}", context.args);
 
     let af = registers.get16(&Registers16::AF);
     let bc = registers.get16(&Registers16::BC);
@@ -57,7 +69,7 @@ fn log_context(context: &Context, registers: &registers::Registers) {
     let f_c = if registers.get_flag(Flag::C) { "C" } else { "-" };
 
     println!("pc: {:<4} | {:<4} | {:<20} | {:<10}", pc_f, opcode_f, instruction_f, args_f);
-    println!("AF: {:X} BC: {:X} DE: {:X} HL: {:X} PC: {:X} SP {:X}", af, bc, de, hl, pc, sp);
+    println!("AF: {:04X} BC: {:04X} DE: {:04X} HL: {:04X} PC: {:04X} SP {:04X}", af, bc, de, hl, pc, sp);
     println!("[{}{}{}{}]", f_z, f_n, f_h, f_c);
 }
 
@@ -148,6 +160,9 @@ impl CPU {
                 if self.log_instructions {
                     log_context(&context, &registers);
                 }
+                if self.log_register_states {
+                    log_register_states(&context, &registers);
+                }
                 self.state = State::Running;
                 cycles
             }
@@ -159,5 +174,6 @@ pub fn new(config: config::Config) -> CPU {
     CPU {
         state: State::Running,
         log_instructions: config.debug.log_instructions,
+        log_register_states: config.debug.log_register_states,
     }
 }

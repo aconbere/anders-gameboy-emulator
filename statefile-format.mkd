@@ -1,0 +1,13 @@
+# State file format
+
+A state file allows you to write out the state of the system registers in a way that allows you to test a known good implementation against your emulator to enable fast debugging.
+
+## Format
+
+The format is:
+
+```
+{AF:X}{BC:X}{DE:X}{HL:X}{SP:X}{PC:X}\n
+```
+
+Where all registers are written out as 16bit hex strings. That makes every step exactly 12 characters long. A newline is added for legibility.

@@ -6,6 +6,7 @@ use std::io;
 pub struct Debug {
     pub frame_count: bool,
     pub log_instructions: bool,
+    pub log_register_states: bool,
     pub break_point_pc: Option<u16>,
     pub break_point_frame: Option<u32>,
     pub repl: bool,
@@ -14,6 +15,7 @@ pub struct Debug {
 pub fn new_debug(
     frame_count:bool,
     log_instructions:bool,
+    log_register_states:bool,
     break_point_frame: Option<&str>,
     break_point_pc: Option<&str>,
     repl: bool,
@@ -24,6 +26,7 @@ pub fn new_debug(
     Ok(Debug {
             frame_count: frame_count,
             log_instructions: log_instructions,
+            log_register_states: log_register_states,
             break_point_pc: bk_pc,
             break_point_frame: bk_frame,
             repl: repl,
@@ -34,6 +37,7 @@ pub fn debug_default() -> Debug {
     Debug {
         frame_count: false,
         log_instructions: false,
+        log_register_states: false,
         break_point_pc: None,
         break_point_frame: None,
         repl: false,

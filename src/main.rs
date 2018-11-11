@@ -27,6 +27,7 @@ fn main() {
         (@subcommand debug =>
             (@arg FRAME_COUNT: --frame_count "Print frame count to display.")
             (@arg LOG_INSTRUCTIONS: --log_instructions "Print each instruction to stdout.")
+            (@arg LOG_REGISTER_STATES: --log_register_states "Log register states to a register state file for every instruction")
             (@arg BREAK_POINT_FRAME: --break_point_frame +takes_value "Frame to pause instruction at.")
             (@arg BREAK_POINT_PC: --break_point_pc +takes_value "Frame to pause instruction at.")
             (@arg REPL: --repl "Boots the emulator into debug mode.")
@@ -37,6 +38,7 @@ fn main() {
         Some(debug_matches) => config::new_debug(
             debug_matches.is_present("FRAME_COUNT"),
             debug_matches.is_present("LOG_INSTRUCTIONS"),
+            debug_matches.is_present("LOG_REGISTER_STATES"),
             debug_matches.value_of("BREAK_POINT_FRAME"),
             debug_matches.value_of("BREAK_POINT_PC"),
             debug_matches.is_present("REPL"),

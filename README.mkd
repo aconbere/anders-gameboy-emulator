@@ -18,4 +18,11 @@ Basic use of the emulator can be understood from `cargo run`. A standard invocat
 The debug subcommand offers some debug tools
 
 * `--log_instructions` will output every instruction run to stdout
+* `--log_register_state` will write out register state for every instruction to a register_state_file
 * `--frame_count` will render a framecount to the canvas
+
+## Testing
+
+The emulator currently runs correctly through the bootloader but for many roms fails soon after loading a cartrige. The way I'm testing is running bgb and then walking the call stack one instruction at a time comparing register states looking for a discrepency.
+
+

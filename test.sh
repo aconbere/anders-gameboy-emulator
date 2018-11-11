@@ -1,7 +1,7 @@
 pushd ../blarggs-tests/cpu_instrs/source
-# ./build.sh "01-special"
+./build.sh "01-special"
 # ./build.sh "02-interrupts"
-./build.sh "03-op sp,hl"
+# ./build.sh "03-op sp,hl"
 # ./build.sh "04-op r,imm"
 # ./build.sh "05-op rp"
 # ./build.sh "06-ld r,r"
@@ -12,10 +12,9 @@ pushd ../blarggs-tests/cpu_instrs/source
 # ./build.sh "11-op a,(hl)"
 
 popd
-# cargo run -- --boot_rom ../gb_test_roms/DMG_ROM.bin --game_rom ../blarggs-tests/cpu_instrs/source/test.gb
 cargo run -- \
   --boot_rom ../gb_test_roms/DMG_ROM.bin \
   --game_rom ../blarggs-tests/cpu_instrs/source/test.gb \
-  # debug \
-    # --break_point_pc $1
-    #--log_instructions \
+  debug \
+    --break_point_pc $1 \
+    --log_register_states
