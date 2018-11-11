@@ -38,7 +38,7 @@ impl Context {
     }
 }
 
-fn log_register_states(context: &Context, registers: &registers::Registers) {
+fn log_register_states(registers: &registers::Registers) {
     let pc = registers.get16(&Registers16::PC);
     let af = registers.get16(&Registers16::AF);
     let bc = registers.get16(&Registers16::BC);
@@ -132,6 +132,9 @@ impl CPU {
         match instruction {
             instructions::Op::PrefixCB => {
                 self.state = State::Prefix;
+                if self.log_register_states {
+                    log_register_states(&registers);
+                }
                 0
             }
             instructions::Op::HALT => {
@@ -161,7 +164,7 @@ impl CPU {
                     log_context(&context, &registers);
                 }
                 if self.log_register_states {
-                    log_register_states(&context, &registers);
+                    log_register_states(&registers);
                 }
                 self.state = State::Running;
                 cycles

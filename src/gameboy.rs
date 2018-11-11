@@ -174,7 +174,6 @@ mod tests {
     }
 
     fn parse_state_string(s:String) -> State {
-
         State {
             pc: parse_u16_hex(&s[0..4]),
             af: parse_u16_hex(&s[4..8]),
@@ -208,9 +207,10 @@ mod tests {
         let mut framebuffer: framebuffer::Framebuffer = [palette::Shade::White; 23040];
 
         for s in states {
-            let register_state = registers_to_state(&gameboy.registers);
-            assert_eq!(s, register_state);
             gameboy.next_instruction(&mut framebuffer);
+            let register_state = registers_to_state(&gameboy.registers);
+            println!("{:?}--{:?}", s, register_state);
+            assert_eq!(s, register_state);
         }
     }
 }
