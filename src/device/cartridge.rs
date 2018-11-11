@@ -27,3 +27,8 @@ pub fn new(game_rom: &mut File) -> Cartridge {
         storage: m,
     }
 }
+
+#[cfg(test)]
+pub fn zero() -> Cartridge {
+    Cartridge{ storage: [0;32767] }
+}

@@ -23,6 +23,7 @@ pub fn new (f: &mut File) -> BootRom {
     BootRom{ storage: m }
 }
 
+#[cfg(test)]
 pub fn zero() -> BootRom {
     BootRom{ storage: [0;256] }
 }

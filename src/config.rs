@@ -84,3 +84,12 @@ pub fn new(
         debug: debug,
     })
 }
+
+#[cfg(test)]
+pub fn zero() -> Config {
+    Config {
+        boot_rom: String::from("test_boot_rom"),
+        game_rom: String::from("test_game_rom"),
+        debug: debug_default(),
+    }
+}

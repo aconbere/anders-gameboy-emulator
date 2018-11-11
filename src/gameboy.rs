@@ -136,3 +136,82 @@ pub fn new(config: &config::Config) -> Gameboy {
         gpu: gpu::new(),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::fs::File;
+    use std::io::{BufReader, BufRead};
+    use std::path::Path;
+    use registers;
+    use config;
+    use std::iter::Map;
+    use palette;
+    use framebuffer;
+
+    #[derive(Debug, PartialEq)]
+    struct State {
+        pc: u16,
+        af: u16,
+        bc: u16,
+        de: u16,
+        hl: u16,
+        sp: u16,
+    }
+
+    fn registers_to_state(r:&registers::Registers) -> State {
+        State {
+            pc: r.get16(&registers::Registers16::PC),
+            af: r.get16(&registers::Registers16::AF),
+            bc: r.get16(&registers::Registers16::BC),
+            de: r.get16(&registers::Registers16::DE),
+            hl: r.get16(&registers::Registers16::HL),
+            sp: r.get16(&registers::Registers16::SP),
+        }
+    }
+
+    fn parse_u16_hex(s:&str) -> u16 {
+        u16::from_str_radix(s, 16).unwrap()
+    }
+
+    fn parse_state_string(s:String) -> State {
+
+        State {
+            pc: parse_u16_hex(&s[0..4]),
+            af: parse_u16_hex(&s[4..8]),
+            bc: parse_u16_hex(&s[8..12]),
+            de: parse_u16_hex(&s[12..16]),
+            hl: parse_u16_hex(&s[16..20]),
+            sp: parse_u16_hex(&s[20..24]),
+        }
+    }
+
+
+    fn read_state_file(filename:&Path) -> Vec<State> {
+        let f = File::open(filename).unwrap();
+
+        BufReader::new(f).lines().map(|l|
+            parse_state_string(l.unwrap())
+        ).collect::<Vec<State>>()
+    }
+
+    #[test]
+    fn boot_rom_states_are_exact() {
+        let states = read_state_file(Path::new("./tests/state_files/boot_rom_states"));
+
+        let config = config::Config {
+            boot_rom: String::from("../gb_test_roms/DMG_ROM.bin"),
+            game_rom: String::from("./tests/cpu_test_rom_special.gb"),
+            debug: config::debug_default(),
+        };
+
+        let mut gameboy = super::new(&config);
+        let mut framebuffer: framebuffer::Framebuffer = [palette::Shade::White; 23040];
+
+        for s in states {
+            let register_state = registers_to_state(&gameboy.registers);
+            assert_eq!(s, register_state);
+            gameboy.next_instruction(&mut framebuffer);
+        }
+    }
+}
+
