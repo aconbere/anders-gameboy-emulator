@@ -1861,7 +1861,7 @@ mod tests {
 
         assert_eq!(4, cpu.tick(&instructions, &mut registers, &mut mmu));
         assert_eq!(1, registers.get16(&Registers16::PC));
-        // assert_eq!(0xFFFE, registers.get16(&Registers16::SP));
+        assert_eq!(0xFFFE, registers.get16(&Registers16::SP));
     }
 
     #[test]
