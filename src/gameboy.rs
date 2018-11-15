@@ -199,12 +199,37 @@ mod tests {
 
         let config = config::Config {
             boot_rom: String::from("../gb_test_roms/DMG_ROM.bin"),
-            game_rom: String::from("./tests/cpu_test_rom_special.gb"),
+            game_rom: String::from("./tests/cpu_instrs_01_special.gb"),
             debug: config::debug_default(),
         };
 
         let mut gameboy = super::new(&config);
         let mut framebuffer: framebuffer::Framebuffer = [palette::Shade::White; 23040];
+
+        for s in states {
+            gameboy.next_instruction(&mut framebuffer);
+            let register_state = registers_to_state(&gameboy.registers);
+            println!("{:?}--{:?}", s, register_state);
+            assert_eq!(s, register_state);
+        }
+    }
+
+    #[test]
+    fn cpu_instr_06_ld_r_r() {
+        let states = read_state_file(Path::new("./tests/state_files/06_ld_r_r.test"));
+
+        let config = config::Config {
+            boot_rom: String::from("../gb_test_roms/DMG_ROM.bin"),
+            game_rom: String::from("./tests/cpu_instrs_06_ld_r_r.gb"),
+            debug: config::debug_default(),
+        };
+
+        let mut gameboy = super::new(&config);
+        let mut framebuffer: framebuffer::Framebuffer = [palette::Shade::White; 23040];
+
+        while gameboy.get_pc() < 0x0100 {
+            gameboy.next_instruction(&mut framebuffer);
+        }
 
         for s in states {
             gameboy.next_instruction(&mut framebuffer);
