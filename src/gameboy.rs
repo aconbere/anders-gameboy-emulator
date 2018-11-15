@@ -227,7 +227,7 @@ mod tests {
         let mut gameboy = super::new(&config);
         let mut framebuffer: framebuffer::Framebuffer = [palette::Shade::White; 23040];
 
-        while gameboy.get_pc() < 0x0100 {
+        while gameboy.get_pc() != 0x00FF {
             gameboy.next_instruction(&mut framebuffer);
         }
 
