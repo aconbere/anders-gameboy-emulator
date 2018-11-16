@@ -191,6 +191,9 @@ impl Device for HardwareIO {
                 self.storage[a as usize] = v;
             }
             0x0002 => {
+                /* This is the serial output device
+                 * if v is 0x81 then we want to print the buffer
+                 */
                 if v == 0x81 {
                     print!("{}", self.get(0x0001) as char);
                     io::stdout().flush().unwrap();

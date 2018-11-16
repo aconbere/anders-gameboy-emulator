@@ -206,11 +206,12 @@ mod tests {
         let mut gameboy = super::new(&config);
         let mut framebuffer: framebuffer::Framebuffer = [palette::Shade::White; 23040];
 
+        gameboy.next_instruction(&mut framebuffer);
+
         for s in states {
-            gameboy.next_instruction(&mut framebuffer);
             let register_state = registers_to_state(&gameboy.registers);
-            println!("{:?}--{:?}", s, register_state);
             assert_eq!(s, register_state);
+            gameboy.next_instruction(&mut framebuffer);
         }
     }
 
@@ -227,15 +228,15 @@ mod tests {
         let mut gameboy = super::new(&config);
         let mut framebuffer: framebuffer::Framebuffer = [palette::Shade::White; 23040];
 
-        while gameboy.get_pc() != 0x00FF {
+        while gameboy.get_pc() < 0x0100 {
             gameboy.next_instruction(&mut framebuffer);
         }
 
         for s in states {
-            gameboy.next_instruction(&mut framebuffer);
+            println!("State: {:?}", s);
             let register_state = registers_to_state(&gameboy.registers);
-            println!("{:?}--{:?}", s, register_state);
             assert_eq!(s, register_state);
+            gameboy.next_instruction(&mut framebuffer);
         }
     }
 }
